@@ -4,7 +4,7 @@ This extension helps you to sync your source code to projects' dependencies fold
 
 ## Features
 
-This extension helps you to sync your source code to projects' dependencies folders which depends on it automatically. Only works when your source module and your projects are in the same workspace.
+To watch project dependencies, put a `.nodedwswatcher` file in the project folder together with the `package.json` file.
 
 ## Extension Settings
 

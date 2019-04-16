@@ -48,6 +48,7 @@ export function activate(context: vscode.ExtensionContext) {
 								terminal.sendText(`rmdir /s /q ${task.projectDepPath}${file}`);
 								terminal.sendText(`echo d|xcopy ${task.modulePath}${file} ${task.projectDepPath}${file} /d /e`);
 							});
+							terminal.sendText('exit');
 						});
 					});
 				});

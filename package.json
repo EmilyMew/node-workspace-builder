@@ -5,6 +5,10 @@
   "version": "0.0.1",
   "author": "EmilyWang",
   "publisher": "EmilyWang",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/EmilyMew/node-workspace-builder.git"
+  },
   "engines": {
     "vscode": "^1.33.0"
   },
