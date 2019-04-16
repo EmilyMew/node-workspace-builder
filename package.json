@@ -1,0 +1,59 @@
+{
+  "name": "node-workspace-builder",
+  "displayName": "node-workspace-builder",
+  "description": "This extension helps you to sync your source code to projects' dependencies folders which depends on it automatically. Only works when your source module and your projects are in the same workspace.",
+  "version": "0.0.1",
+  "author": "EmilyWang",
+  "publisher": "EmilyWang",
+  "engines": {
+    "vscode": "^1.33.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "workspaceContains:**/.nodedwswatcher",
+    "onCommand:extension.buildWorkspace"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "configuration": {
+      "type": "object",
+      "title": "Node workspace builder configuration",
+      "properties": {
+        "node-workspace-builder.autoBuildOnSave": {
+          "type": "boolean",
+          "default": false,
+          "description": "Specify if build the whole workspace on saving text documents."
+        },
+        "node-workspace-builder.autoBuildOnFoldersChanged": {
+          "type": "boolean",
+          "default": true,
+          "description": "Specify if build the whole workspace on workspace folders changed."
+        }
+      }
+    },
+    "commands": [{
+      "command": "extension.buildWorkspace",
+      "title": "Build Workspace"
+    }]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "postinstall": "node ./node_modules/vscode/bin/install",
+    "test": "npm run compile && node ./node_modules/vscode/bin/test"
+  },
+  "devDependencies": {
+    "typescript": "^3.3.1",
+    "vscode": "^1.1.28",
+    "tslint": "^5.12.1",
+    "@types/node": "^10.12.21",
+    "@types/mocha": "^2.2.42"
+  },
+  "dependencies": {
+    "@types/semver": "^6.0.0",
+    "semver": "^6.0.0"
+  }
+}
