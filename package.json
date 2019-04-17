@@ -10,7 +10,7 @@
     "url": "https://github.com/EmilyMew/node-workspace-builder.git"
   },
   "engines": {
-    "vscode": "^1.33.0"
+    "vscode": "^1.32.0"
   },
   "categories": [
     "Other"
