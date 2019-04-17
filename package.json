@@ -2,7 +2,7 @@
   "name": "node-workspace-builder",
   "displayName": "node-workspace-builder",
   "description": "This extension helps you to sync your source code to projects' dependencies folders which depends on it automatically. Only works when your source module and your projects are in the same workspace.",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "author": "EmilyWang",
   "publisher": "EmilyWang",
   "repository": {
@@ -40,6 +40,10 @@
     "commands": [{
       "command": "extension.buildWorkspace",
       "title": "Build Workspace"
+    }],
+    "taskDefinitions": [{
+      "type": "build",
+      "required": ["task"]
     }]
   },
   "scripts": {

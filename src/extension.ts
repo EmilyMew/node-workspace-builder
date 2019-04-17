@@ -5,10 +5,11 @@ import * as vscode from 'vscode';
 
 import PackReader from './file/PackReader';
 import PathConstants from './constant/PathConstants';
-import Task from './model/Task';
+import CopyTask from './model/CopyTask';
 
 
 const packReader = new PackReader();
+
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
@@ -26,27 +27,41 @@ export function activate(context: vscode.ExtensionContext) {
 			packReader.scan(root, PathConstants.PLACEHOLDER, [PathConstants.NODE_MODULES, PathConstants.GIT]).then(placeholders => {
 				projects.splice(0, projects.length, ...placeholders.map(path => path.replace(PathConstants.PLACEHOLDER, '')));
 				packReader.scan(root, PathConstants.PACK_JSON, [PathConstants.NODE_MODULES, PathConstants.GIT]).then(packFiles => {
-					packReader.prepareTasks(placeholders, packFiles).then(tasks => {
+					packReader.prepareCopyTasks(placeholders, packFiles).then(tasks => {
 						const terminalCfg = vscode.workspace.getConfiguration('terminal.external');
 						const terminal = vscode.window.createTerminal('cmd', terminalCfg.get('windowsExec'));
 						terminal.show();
 						projects.forEach(projectPath => {
-							const needInstall = !fs.statSync(`${projectPath}${PathConstants.NODE_MODULES}`).isDirectory();
+							let needInstall = false;
+							try {
+								needInstall = !fs.statSync(`${projectPath}${PathConstants.NODE_MODULES}`).isDirectory();
+							} catch (e) {
+								needInstall = true;
+							}
 							if (needInstall) {
 								terminal.sendText(`cd ${projectPath}`);
 								terminal.sendText('call npm install');
 							}
 						});
-						tasks.forEach((task: Task) => {
-							const needInstallDep = !fs.statSync(`${task.modulePath}${PathConstants.NODE_MODULES}`).isDirectory();
+						tasks.forEach((task: CopyTask) => {
+							let needInstallDep = false;
+							try {
+								needInstallDep = !fs.statSync(`${task.modulePath}${PathConstants.NODE_MODULES}`).isDirectory();
+							} catch (e) {
+								needInstallDep = true;
+							}
 							terminal.sendText(`cd ${task.modulePath}`);
 							if (needInstallDep) {
 								terminal.sendText('call npm install');
 							}
 							terminal.sendText('npm run build');
+							// clean up after build;
+							terminal.sendText(`del ${task.modulePath}${PathConstants.PACK_LOCK_JSON}`);
+							terminal.sendText(`rmdir /s /q ${task.modulePath}${PathConstants.NODE_MODULES}`);
 							task.files.forEach(file => {
 								terminal.sendText(`rmdir /s /q ${task.projectDepPath}${file}`);
 								terminal.sendText(`echo d|xcopy ${task.modulePath}${file} ${task.projectDepPath}${file} /d /e`);
+								terminal.sendText(`rmdir /s /q ${task.modulePath}${file}`);
 							});
 							terminal.sendText('exit');
 						});

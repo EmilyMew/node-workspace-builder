@@ -6,6 +6,14 @@ This extension helps you to sync your source code to projects' dependencies fold
 
 To watch project dependencies, put a `.nodedwswatcher` file in the project folder together with the `package.json` file.
 
+## Requirements
+
+Only Windows supported for now.
+
+## Known issues
+
+Only dependencies can be detected, not for peerDependencies and devDependencies.
+
 ## Extension Settings
 
 

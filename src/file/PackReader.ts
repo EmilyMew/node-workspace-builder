@@ -4,8 +4,27 @@ import * as semver from 'semver';
 
 import Dep from '../model/Dep';
 import Pack from '../model/Pack';
-import Task from '../model/Task';
+import CopyTask from '../model/CopyTask';
 import PathConstants from '../constant/PathConstants';
+
+const getAllPackDeps = (pack: Pack, packMap: Map<string, Pack>, projectPack: Pack): Array<CopyTask> => {
+  const taskQueue = new Array<CopyTask>();
+  pack.dependencies.forEach((dep: Dep) => {
+    const depPack = packMap.get(dep.name);
+    if (depPack === undefined || depPack === null) {
+      return taskQueue;
+    }
+    if (semver.satisfies(depPack.version, dep.version)) {
+      const targetPath = projectPack.path.replace(PathConstants.PACK_JSON, `${PathConstants.NODE_MODULES}${path.sep}${dep.name}${path.sep}`);
+      const srcPath = depPack.path.replace(PathConstants.PACK_JSON, '');
+      const task = new CopyTask(targetPath, srcPath, depPack.files);
+      taskQueue.push(task);
+    }
+    taskQueue.splice(0, 0, ...getAllPackDeps(depPack, packMap, projectPack));
+  });
+  return taskQueue;
+
+};
 
 export default class PackReader {
   async scan(root: string, matches: string, ignores: Array<string>): Promise<Array<string>> {
@@ -30,7 +49,7 @@ export default class PackReader {
     return paths;
   }
 
-  async prepareTasks(placeholders: Array<string>, packFiles: Array<string>): Promise<Array<Task>> {
+  async prepareCopyTasks(placeholders: Array<string>, packFiles: Array<string>): Promise<Array<CopyTask>> {
     const packMap = new Map<string, Pack>();
     packFiles.forEach(filePath => {
       let pack = require(filePath);
@@ -44,25 +63,12 @@ export default class PackReader {
       const watch = placeholders.includes(filePath.replace(PathConstants.PACK_JSON, PathConstants.PLACEHOLDER));
       packMap.set(pack.name, new Pack(filePath, watch, pack.version, pack.files, dependencies));
     });
-    const taskQueue = new Array<Task>();
+    const taskQueue = new Array<CopyTask>();
     packMap.forEach((value: Pack, key: string) => {
       if (!value.watch) {
         return;
       }
-      let array = new Array<Dep>();
-      value.dependencies.forEach((dep: Dep) => {
-        const pack = packMap.get(dep.name);
-        if (pack === undefined || pack === null) {
-          return;
-        }
-        if (semver.satisfies(value.version, dep.version) && array !== null && array !== undefined) {
-          array.push(dep);
-          const targetPath = value.path.replace(PathConstants.PACK_JSON, `${PathConstants.NODE_MODULES}${path.sep}${dep.name}${path.sep}`);
-          const srcPath = pack.path.replace(PathConstants.PACK_JSON, '');
-          const task = new Task(targetPath, srcPath, pack.files);
-          taskQueue.push(task);
-        }
-      });
+      taskQueue.splice(taskQueue.length, 0, ...getAllPackDeps(value, packMap, value));
     });
     console.log(taskQueue);
     return taskQueue;

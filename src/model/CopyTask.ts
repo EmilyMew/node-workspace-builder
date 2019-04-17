@@ -1,4 +1,4 @@
-export default class Task {
+export default class CopyTask {
   public projectDepPath: string;
   public modulePath: string;
   public files: Array<string>;
