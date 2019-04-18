@@ -69,6 +69,9 @@ const buildFunction = () => {
 			TerminalHelper.execDelFile(terminal, `${task.modulePath}${PathConstants.PACK_LOCK_JSON}`);
 			TerminalHelper.execRmDir(terminal, `${task.modulePath}${PathConstants.NODE_MODULES}`);
 			task.files.forEach(file => {
+				if (!fs.existsSync(task.projectDepPath)) {
+					fs.mkdirSync(task.projectDepPath);
+				}
 				let targetPath = `${task.projectDepPath}${file}`;
 				let srcPath = `${task.modulePath}${file}`;
 				TerminalHelper.execRmDir(terminal, targetPath);
