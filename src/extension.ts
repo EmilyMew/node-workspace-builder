@@ -75,8 +75,8 @@ const buildFunction = () => {
 				TerminalHelper.execCopyDir(terminal, srcPath, targetPath);
 				TerminalHelper.execRmDir(terminal, srcPath);
 			});
-			TerminalHelper.execExit(terminal);
 		});
+		TerminalHelper.execExit(terminal);
 		// Display a message box to the user
 		vscode.window.showInformationMessage('Node Dependencies Helper synchronized dependencies for current workspace!');
 	}).catch(err => {
