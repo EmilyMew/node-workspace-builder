@@ -1,4 +1,4 @@
-# node-deps-helper README
+# Node Workspace Builder README
 
 This extension helps you to sync your source code to projects' dependencies folders which depends on it automatically. Only works when your source module and your projects are in the same workspace.
 

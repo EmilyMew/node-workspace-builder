@@ -20,13 +20,20 @@ const getAllPackDeps = (pack: Pack, packMap: Map<string, Pack>, projectPack: Pac
       const task = new CopyTask(targetPath, srcPath, depPack.files);
       taskQueue.push(task);
     }
-    taskQueue.splice(0, 0, ...getAllPackDeps(depPack, packMap, projectPack));
+    taskQueue.splice(0, 0, ...getAllPackDeps(depPack, packMap, projectPack).filter(f => taskQueue.find(f1 => f.modulePath === f1.modulePath) === undefined || taskQueue.find(f1 => f.modulePath === f1.modulePath) === null));
   });
   return taskQueue;
 
 };
 
 export default class PackReader {
+
+  public projects: Array<string> = new Array<string>();
+
+  public tasks: Array<CopyTask> = new Array<CopyTask>();
+
+  public watchPaths: Array<string> = new Array<string>();
+
   async scan(root: string, matches: string, ignores: Array<string>): Promise<Array<string>> {
     let paths = new Array<string>();
     const files = fs.readdirSync(root);
@@ -49,7 +56,8 @@ export default class PackReader {
     return paths;
   }
 
-  async prepareCopyTasks(placeholders: Array<string>, packFiles: Array<string>): Promise<Array<CopyTask>> {
+  prepareCopyTasks(placeholders: Array<string>, packFiles: Array<string>) {
+    this.watchPaths = new Array<string>();
     const packMap = new Map<string, Pack>();
     packFiles.forEach(filePath => {
       let pack = require(filePath);
@@ -61,6 +69,9 @@ export default class PackReader {
         });
       }
       const watch = placeholders.includes(filePath.replace(PathConstants.PACK_JSON, PathConstants.PLACEHOLDER));
+      if (watch) {
+        this.watchPaths.push(filePath);
+      }
       packMap.set(pack.name, new Pack(filePath, watch, pack.version, pack.files, dependencies));
     });
     const taskQueue = new Array<CopyTask>();
@@ -70,8 +81,10 @@ export default class PackReader {
       }
       taskQueue.splice(taskQueue.length, 0, ...getAllPackDeps(value, packMap, value));
     });
-    console.log(taskQueue);
-    return taskQueue;
+    this.watchPaths.splice(0, this.watchPaths.length, PathConstants.PACK_JSON, ...taskQueue.map((task: CopyTask) => {
+      return task.modulePath;
+    }));
+    this.tasks = taskQueue;
   }
 
 }
