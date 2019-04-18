@@ -11,10 +11,6 @@ To watch project dependencies, put a `.nodedwswatcher` file in the project folde
 Windows, MacOS, Linux are all supported for now. Needs VS Code 1.32 or newer.
 * Notice: This extension is not well tested under MacOS and Linux because of author of this extension have only one PC running Windows 10.
 
-## Known issues
-
-Only dependencies can be detected, not for peerDependencies and devDependencies.
-
 ## Extension Settings
 
 
