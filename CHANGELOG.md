@@ -2,6 +2,9 @@
 
 All notable changes to the "Node Workspace Builder" extension will be documented in this file.
 
+## 0.0.5
+- `Added` Added icon to extension pack.
+
 ## 0.0.4
 - `Changed` Configuration `node-workspace-builder.autoBuildOnSave` is defaultly set to `true` for now.
 - `Changed` Before starting a new build task firstly check if modified file is in watching path on saving text documents.
