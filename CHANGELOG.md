@@ -4,7 +4,7 @@ All notable changes to the "Node Workspace Builder" extension will be documented
 
 ## 0.0.6
 - `Changed` Build faster on saving documents: auto building on saving documents just build module which is modified for now.
-- `Changed` You can build while project running for now. Notice that sometimes though it was built success but does not affect immediatly if you are using webpack-dev-server.
+- `Changed` You can build while project running for now. Notice that sometimes though it  was successfully built but does not affect immediatly if you are using webpack-dev-server.
 
 ## 0.0.5
 - `Added` Added icon to extension pack.
