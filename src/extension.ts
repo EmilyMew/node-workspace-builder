@@ -96,7 +96,9 @@ export function activate(context: vscode.ExtensionContext) {
 	// This line of code will only be executed once when your extension is activated
 	console.log('Congratulations, your extension "node-workspace-builder" is now active!');
 
-	let build = vscode.commands.registerCommand('extension.buildWorkspace', buildFunction);
+	let build = vscode.commands.registerCommand('extension.buildWorkspace', () => {
+		buildFunction(packReader.projects, packReader.tasks);
+	});
 	context.subscriptions.push(build);
 
 	vscode.workspace.onDidSaveTextDocument((e: vscode.TextDocument) => {
