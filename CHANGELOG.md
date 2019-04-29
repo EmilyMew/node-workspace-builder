@@ -3,8 +3,9 @@
 All notable changes to the "Node Workspace Builder" extension will be documented in this file.
 
 ## 0.0.7
+- `Added` You can watch a node project with a context menu for now.
 - `Changed` Hide terminal and show a progress bar while building.
-- `Fixed` build using command throws an exception on `v0.0.6`.
+- `Fixed` Build using command throws an exception on `v0.0.6`.
 
 ## 0.0.6
 - `Changed` Build faster on saving documents: auto building on saving documents just build module which is modified for now.

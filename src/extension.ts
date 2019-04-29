@@ -125,18 +125,18 @@ export function activate(context: vscode.ExtensionContext) {
 			vscode.window.showWarningMessage('This is a dependency installation folder. Workspace builder will not watch this.');
 			return;
 		}
-		if (e.fsPath.indexOf(PathConstants.PACK_JSON) >= 0) {
+		if (e.fsPath.indexOf(PathConstants.PACK_JSON) >= 0 || fs.existsSync(e.fsPath + path.sep + PathConstants.PACK_JSON)) {
 			fs.writeFileSync(e.fsPath.replace(PathConstants.PACK_JSON, PathConstants.PLACEHOLDER), '');
+			prepare().then(() => {
+				buildFunction(packReader.projects, packReader.tasks);
+			});
 		} else {
-			if (fs.existsSync(e.fsPath + path.sep + PathConstants.PACK_JSON)) {
-				fs.writeFileSync(e.fsPath + path.sep + PathConstants.PLACEHOLDER, '');
-			} else {
-				vscode.window.showWarningMessage('There is no package.json file found. This folder is not a node project folder.');
-			}
+			vscode.window.showWarningMessage('There is no package.json file found. This folder is not a node project folder.');
 		}
 	});
 
 	context.subscriptions.push(build);
+	context.subscriptions.push(watch);
 
 	vscode.workspace.onDidSaveTextDocument((e: vscode.TextDocument) => {
 		const configuration = vscode.workspace.getConfiguration('node-workspace-builder');
