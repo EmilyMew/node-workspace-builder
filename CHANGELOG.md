@@ -2,6 +2,10 @@
 
 All notable changes to the "Node Workspace Builder" extension will be documented in this file.
 
+## 0.0.7
+- `Changed` Hide terminal and show a progress bar while building.
+- `Fixed` build using command throws an exception on `v0.0.6`.
+
 ## 0.0.6
 - `Changed` Build faster on saving documents: auto building on saving documents just build module which is modified for now.
 - `Changed` You can build while project running for now. Notice that sometimes though it  was successfully built but does not affect immediatly if you are using webpack-dev-server.
