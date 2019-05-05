@@ -3,11 +3,13 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import * as npm from 'npm';
 
 import PackReader from './file/PackReader';
-import TerminalHelper from './terminal/TerminalHelper';
 import PathConstants from './constant/PathConstants';
 import CopyTask from './model/CopyTask';
+import Builder from './build/Builder';
+import { resolve } from 'dns';
 
 const packReader = new PackReader();
 
@@ -26,81 +28,28 @@ const prepare = (): Promise<undefined> => {
 	});
 };
 
+let building = false;
+
 const buildFunction = (projects: Array<string>, tasks: Array<CopyTask>) => {
 	const configuration = vscode.workspace.getConfiguration('node-workspace-builder');
 	new Promise((resolve, reject) => {
-		for (let i = 0; i < vscode.window.terminals.length; i++) {
-			const terminal = vscode.window.terminals[i];
-			if (terminal.name === TerminalHelper.TERMINAL_NAME) {
-				return reject(new Error('You currently have build task or node task running. Please wait until all tasks are finished.'));
-			}
+		if (building) {
+			return reject(new Error('You currently have a build task running. Please wait until finished.'));
 		}
+		building = true;
 		resolve();
 	}).then(() => {
-		vscode.window.withProgress({
-			location: vscode.ProgressLocation.Notification,
-			title: 'Building workspace',
-			cancellable: false
-		}, (progress, token) => {
-			const terminal = TerminalHelper.createTerminal();
-			let needInstallAll = false;
-			projects.forEach(projectPath => {
-				let needInstall = false;
-				try {
-					needInstall = !fs.statSync(`${projectPath}${PathConstants.NODE_MODULES}`).isDirectory();
-				} catch (e) {
-					needInstall = true;
-				}
-				if (needInstall) {
-					needInstallAll = true;
-					TerminalHelper.execCdToDir(terminal, projectPath);
-					TerminalHelper.execNpmInstall(terminal);
-				}
+		if (configuration.get('npmInstallationSelect') === 'built-in') {
+			return Builder.npmBuild(projects, tasks).then(() => {
+				building = false;
+				return Promise.resolve();
 			});
-			// progress.report({ message: 'Installing project dependencies...' });
-			tasks.forEach((task: CopyTask) => {
-				let needInstallDep = false;
-				if (!configuration.get('buildModulesWithoutInstall')) {
-					try {
-						const moduleDepPath = `${task.modulePath}${PathConstants.NODE_MODULES}`;
-						needInstallDep = !fs.existsSync(moduleDepPath) || !fs.statSync(moduleDepPath).isDirectory();
-					} catch (e) {
-						needInstallDep = true;
-					}
-				}
-				TerminalHelper.execCdToDir(terminal, task.modulePath);
-				if (needInstallDep) {
-					TerminalHelper.execNpmInstall(terminal);
-				}
-				TerminalHelper.execNpmRunScript(terminal, 'build');
-				// clean up after build;
-				TerminalHelper.execDelFile(terminal, `${task.modulePath}${PathConstants.PACK_LOCK_JSON}`);
-				TerminalHelper.execRmDir(terminal, `${task.modulePath}${PathConstants.NODE_MODULES}`);
-				task.files.forEach(file => {
-					if (!fs.existsSync(task.projectDepPath) && !needInstallAll) {
-						fs.mkdirSync(task.projectDepPath, { recursive: true });
-					}
-					let targetPath = `${task.projectDepPath}${file}`;
-					let srcPath = `${task.modulePath}${file}`;
-					TerminalHelper.execRmDir(terminal, targetPath);
-					TerminalHelper.execCopyDir(terminal, srcPath, targetPath);
-					TerminalHelper.execRmDir(terminal, srcPath);
-				});
+		} else {
+			return Builder.terminalBuild(projects, tasks).then(() => {
+				building = false;
+				return Promise.resolve();
 			});
-			// progress.report({ message: 'Synchronizing modules to project dependencies...' });
-			TerminalHelper.execExit(terminal);
-			return new Promise(resolve => {
-				let event = vscode.window.onDidCloseTerminal(e => {
-					if (e.name === TerminalHelper.TERMINAL_NAME) {
-						progress.report({ message: 'Almost there...' });
-						event.dispose();
-						resolve();
-					}
-				});
-			});
-		});
-		// Display a message box to the user
-		// vscode.window.showInformationMessage('Node Dependencies Helper synchronized dependencies for current workspace!');
+		}
 	}).catch(err => {
 		console.error(err);
 		vscode.window.showErrorMessage(err.message);

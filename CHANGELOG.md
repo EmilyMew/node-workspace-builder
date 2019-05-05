@@ -31,4 +31,4 @@ All notable changes to the "Node Workspace Builder" extension will be documented
 - `Added` Basically implemented build functions.
 
 ## [Unreleased]
-- Nothing.
+- `Added` Select NPM installation to build workspace.
