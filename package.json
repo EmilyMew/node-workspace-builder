@@ -44,8 +44,8 @@
         "node-workspace-builder.npmInstallationSelect": {
           "type": "string",
           "default": "external",
-          "enum": ["external", "built-in"],
-          "description": "Specify whitch npm installation to build with. The option `external` means using npm installation pre-installed on your PC, the option `built-in` means using npm integrated in this extension."
+          "enum": ["external", "integrated"],
+          "description": "Specify whitch npm installation to build with. The option `external` means using npm installation pre-installed on your PC, the option `integrated` means using npm integrated in this extension."
         }
       }
     },

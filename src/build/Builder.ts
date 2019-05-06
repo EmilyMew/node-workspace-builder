@@ -7,6 +7,47 @@ import PathConstants from '../constant/PathConstants';
 import TerminalHelper from '../terminal/TerminalHelper';
 import CopyTask from '../model/CopyTask';
 
+const remove = (src: string) => {
+  let paths = fs.readdirSync(src);
+  paths.forEach(path => {
+    const _src = src + '/' + path;
+    const stats = fs.statSync(_src);
+    if (stats.isFile()) {
+      fs.unlinkSync(_src);
+    } else if (stats.isDirectory()) {
+      remove(_src);
+    }
+  });
+  fs.rmdirSync(src);
+};
+
+const copy = (src: string, dst: string) => {
+  let paths = fs.readdirSync(src);
+  paths.forEach(path => {
+    const _src = src + '/' + path;
+    const _dst = dst + '/' + path;
+    fs.stat(_src, (err, stats) => {
+      if (err) {
+        throw err;
+      }
+      if (stats.isFile()) {
+        let readable = fs.createReadStream(_src);
+        let writable = fs.createWriteStream(_dst);
+        readable.pipe(writable);
+      } else if (stats.isDirectory()) {
+        fs.access(dst, fs.constants.F_OK, (err) => {
+          if (err) {
+            fs.mkdirSync(dst);
+            copy(_src, _dst);
+          } else {
+            copy(_src, _dst);
+          }
+        });
+      }
+    });
+  });
+};
+
 export default class Builder {
 
   static terminalBuild(projects: Array<string>, tasks: Array<CopyTask>): Thenable<any> {
@@ -83,14 +124,10 @@ export default class Builder {
       const npmPath = `${process.env.APPDATA}${path.sep}npm`;
       let needInstallAll = false;
       return new Promise((resolve, reject) => {
-        console.log('before npm load: ', npmPath);
-        npm.load({ prefix: npmPath }, err => {
-          console.log('loaded');
-          err ? reject(err) : resolve();
-        });
+        npm.load({ prefix: npmPath }, err => err ? reject(err) : resolve());
       }).then(() => {
+        // progress.report({ message: 'Installing project dependencies...' });
         let installed = 0;
-        console.log('installed', installed);
         projects.forEach(projectPath => {
           let needInstall = false;
           try {
@@ -100,14 +137,11 @@ export default class Builder {
           }
           if (needInstall) {
             needInstallAll = true;
-            console.log('before npm install project:', projectPath);
             npm.commands.install([projectPath], (err, data) => {
               if (err) {
-                console.log('npm install error!', err);
                 Promise.reject(err);
               } else {
                 installed++;
-                console.log('npm installed!', data);
                 if (installed === projects.length) {
                   Promise.resolve();
                 }
@@ -118,10 +152,8 @@ export default class Builder {
           }
         });
       }).then(() => {
-        // progress.report({ message: 'Installing project dependencies...' });
-        let buildProgress = 0;
-        console.log('buildProcess', buildProgress);
-        tasks.forEach((task: CopyTask) => {
+        // progress.report({ message: 'Installing module dependencies...' });
+        const promises = tasks.map((task: CopyTask) => {
           let needInstallDep = false;
           if (!configuration.get('buildModulesWithoutInstall')) {
             try {
@@ -131,54 +163,51 @@ export default class Builder {
               needInstallDep = true;
             }
           }
-          console.log('before npm install module:', task.modulePath);
-          new Promise((resolve, reject) => {
+          return new Promise((resolve, reject) => {
             if (needInstallDep) {
               npm.commands.install([task.modulePath], (err, data) => {
-                if (err) {
-                  console.log('npm install error!', err);
-                  Promise.reject(err);
-                } else {
-                  console.log('npm installed!', data);
-                }
-                console.log('before npm build module:', task.modulePath);
-                resolve();
+                err ? reject(err) : resolve();
               });
             } else {
               resolve();
             }
           }).then(() => {
-            npm.commands['run-script'](['build'], (err, data) => {
-              if (err) {
-                console.log('npm build error!', err);
-                Promise.reject(err);
-              } else {
-                console.log('npm build success!', data);
-                if (fs.existsSync(`${task.modulePath}${PathConstants.PACK_LOCK_JSON}`)) {
-                  fs.unlinkSync(`${task.modulePath}${PathConstants.PACK_LOCK_JSON}`);
-                }
-                if (fs.existsSync(`${task.modulePath}${PathConstants.NODE_MODULES}`)) {
-                  fs.rmdirSync(`${task.modulePath}${PathConstants.NODE_MODULES}`);
-                }
-                task.files.forEach(file => {
-                  if (!fs.existsSync(task.projectDepPath) && !needInstallAll) {
-                    fs.mkdirSync(task.projectDepPath, { recursive: true });
+            return new Promise((resolve, reject) => {
+              npm.commands.explore([task.modulePath, 'npm run build'], (err, data) => {
+                if (err) {
+                  reject(err);
+                } else {
+                  if (fs.existsSync(`${task.modulePath}${PathConstants.PACK_LOCK_JSON}`)) {
+                    fs.unlinkSync(`${task.modulePath}${PathConstants.PACK_LOCK_JSON}`);
                   }
-                  let targetPath = `${task.projectDepPath}${file}`;
-                  let srcPath = `${task.modulePath}${file}`;
-                  if (fs.existsSync(srcPath)) {
-                    fs.copyFileSync(srcPath, targetPath);
+                  if (fs.existsSync(`${task.modulePath}${PathConstants.NODE_MODULES}`)) {
+                    remove(`${task.modulePath}${PathConstants.NODE_MODULES}`);
                   }
-                });
-                buildProgress++;
-                if (buildProgress === projects.length) {
-                  Promise.resolve();
+                  let files = 0;
+                  task.files.forEach(file => {
+                    if (!fs.existsSync(task.projectDepPath) && !needInstallAll) {
+                      fs.mkdirSync(task.projectDepPath, { recursive: true });
+                    }
+                    let targetPath = `${task.projectDepPath}${file}`;
+                    let srcPath = `${task.modulePath}${file}`;
+                    try {
+                      copy(srcPath, targetPath);
+                      files++;
+                      remove(srcPath);
+                      if (files === task.files.length) {
+                        resolve();
+                      }
+                    } catch (err) {
+                      console.log(err);
+                      reject(err);
+                    }
+                  });
                 }
-              }
+              });
             });
           });
         });
-        Promise.resolve();
+        return Promise.all(promises);
       }).catch(err => {
         console.log(err);
         Promise.reject(err);

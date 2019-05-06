@@ -2,6 +2,9 @@
 
 All notable changes to the "Node Workspace Builder" extension will be documented in this file.
 
+## 0.1.0
+- `Added` Select NPM installation to build workspace.
+
 ## 0.0.7
 - `Added` You can watch a node project with a context menu for now.
 - `Changed` Hide terminal and show a progress bar while building.
@@ -31,4 +34,4 @@ All notable changes to the "Node Workspace Builder" extension will be documented
 - `Added` Basically implemented build functions.
 
 ## [Unreleased]
-- `Added` Select NPM installation to build workspace.
+- Nothing.

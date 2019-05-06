@@ -39,7 +39,7 @@ const buildFunction = (projects: Array<string>, tasks: Array<CopyTask>) => {
 		building = true;
 		resolve();
 	}).then(() => {
-		if (configuration.get('npmInstallationSelect') === 'built-in') {
+		if (configuration.get('npmInstallationSelect') === 'integrated') {
 			return Builder.npmBuild(projects, tasks).then(() => {
 				building = false;
 				return Promise.resolve();
