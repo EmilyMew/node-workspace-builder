@@ -2,6 +2,9 @@
 
 All notable changes to the "Node Workspace Builder" extension will be documented in this file.
 
+## 0.1.1
+- `Changed` Modified README.md.
+
 ## 0.1.0
 - `Added` Select NPM installation to build workspace.
 
