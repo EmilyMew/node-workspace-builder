@@ -30,8 +30,6 @@ const rmDir = (src: string) => {
 };
 
 const copyDir = (src: string, dst: string) => {
-  console.log('src:', src);
-  console.log('dst:', dst);
   let paths = fs.readdirSync(src);
   return new Promise((resolve, reject) => {
     if (fs.existsSync(dst)) {
@@ -51,7 +49,7 @@ const copyDir = (src: string, dst: string) => {
             reject(err);
           }
           if (stats.isFile()) {
-            console.log('is file path: ', _src);
+            console.log('copy file path: ', _src);
             let readable = fs.createReadStream(_src);
             let writable = fs.createWriteStream(_dst);
             readable.pipe(writable);
