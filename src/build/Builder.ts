@@ -27,7 +27,6 @@ const rmDir = (src: string) => {
   });
   return new Promise((resolve, reject) => {
     Promise.all(promises).then(() => {
-      const pathsa = fs.readdirSync(src);
       setTimeout(() => {
         fs.rmdir(src, (err => {
           err ? reject(err) : resolve();

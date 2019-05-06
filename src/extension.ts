@@ -4,7 +4,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
 
-import PackReader from './file/PackReader';
+import PackReader from './pack/PackReader';
 import PathConstants from './constant/PathConstants';
 import CopyTask from './model/CopyTask';
 import Builder from './build/Builder';
