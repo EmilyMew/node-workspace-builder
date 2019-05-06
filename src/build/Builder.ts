@@ -7,44 +7,66 @@ import PathConstants from '../constant/PathConstants';
 import TerminalHelper from '../terminal/TerminalHelper';
 import CopyTask from '../model/CopyTask';
 
-const remove = (src: string) => {
+const rmDir = (src: string) => {
   let paths = fs.readdirSync(src);
-  paths.forEach(path => {
-    const _src = src + '/' + path;
-    const stats = fs.statSync(_src);
-    if (stats.isFile()) {
-      fs.unlinkSync(_src);
-    } else if (stats.isDirectory()) {
-      remove(_src);
-    }
-  });
-  fs.rmdirSync(src);
-};
-
-const copy = (src: string, dst: string) => {
-  let paths = fs.readdirSync(src);
-  paths.forEach(path => {
-    const _src = src + '/' + path;
-    const _dst = dst + '/' + path;
-    fs.stat(_src, (err, stats) => {
-      if (err) {
-        throw err;
-      }
+  const promises = paths.map(p => {
+    return new Promise((resolve, reject) => {
+      const _src = src + path.sep + p;
+      const stats = fs.statSync(_src);
       if (stats.isFile()) {
-        let readable = fs.createReadStream(_src);
-        let writable = fs.createWriteStream(_dst);
-        readable.pipe(writable);
+        fs.unlinkSync(_src);
+        resolve();
       } else if (stats.isDirectory()) {
-        fs.access(dst, fs.constants.F_OK, (err) => {
-          if (err) {
-            fs.mkdirSync(dst);
-            copy(_src, _dst);
-          } else {
-            copy(_src, _dst);
-          }
-        });
+        rmDir(_src).then(() => {
+          resolve();
+        }).catch(reject);
       }
     });
+  });
+  return Promise.all(promises).then(() => {
+    fs.rmdirSync(src);
+    return Promise.resolve();
+  });
+};
+
+const copyDir = (src: string, dst: string) => {
+  console.log('src:', src);
+  console.log('dst:', dst);
+  let paths = fs.readdirSync(src);
+  return new Promise((resolve, reject) => {
+    if (fs.existsSync(dst)) {
+      resolve(paths);
+    } else {
+      fs.mkdir(dst, err => {
+        err ? reject(err) : resolve(paths);
+      });
+    }
+  }).then(() => {
+    const promises = paths.map(p => {
+      return new Promise((resolve, reject) => {
+        const _src = src + path.sep + p;
+        const _dst = dst + path.sep + p;
+        fs.stat(_src, (err, stats) => {
+          if (err) {
+            reject(err);
+          }
+          if (stats.isFile()) {
+            console.log('is file path: ', _src);
+            let readable = fs.createReadStream(_src);
+            let writable = fs.createWriteStream(_dst);
+            readable.pipe(writable);
+            resolve();
+          } else if (stats.isDirectory()) {
+            copyDir(_src, _dst).then(() => {
+              resolve();
+            }).catch(reject);
+          }
+        });
+      });
+    });
+    return Promise.all(promises);
+  }).catch(err => {
+    console.log(err);
   });
 };
 
@@ -181,27 +203,41 @@ export default class Builder {
                     fs.unlinkSync(`${task.modulePath}${PathConstants.PACK_LOCK_JSON}`);
                   }
                   if (fs.existsSync(`${task.modulePath}${PathConstants.NODE_MODULES}`)) {
-                    remove(`${task.modulePath}${PathConstants.NODE_MODULES}`);
+                    rmDir(`${task.modulePath}${PathConstants.NODE_MODULES}`);
                   }
-                  let files = 0;
-                  task.files.forEach(file => {
-                    if (!fs.existsSync(task.projectDepPath) && !needInstallAll) {
-                      fs.mkdirSync(task.projectDepPath, { recursive: true });
-                    }
-                    let targetPath = `${task.projectDepPath}${file}`;
-                    let srcPath = `${task.modulePath}${file}`;
-                    try {
-                      copy(srcPath, targetPath);
-                      files++;
-                      remove(srcPath);
-                      if (files === task.files.length) {
-                        resolve();
-                      }
-                    } catch (err) {
-                      console.log(err);
-                      reject(err);
-                    }
-                  });
+                  const buildToProject = () => {
+                    const promises = task.files.map(file => {
+                      return new Promise((res, rej) => {
+                        if (!fs.existsSync(task.projectDepPath) && !needInstallAll) {
+                          fs.mkdirSync(task.projectDepPath, { recursive: true });
+                        }
+                        const targetPath = `${task.projectDepPath}${file}`;
+                        const srcPath = `${task.modulePath}${file}`;
+                        if (!fs.existsSync(srcPath)) {
+                          console.log('try again after 500ms.');
+                          setTimeout(() => {
+                            buildToProject().then(() => {
+                              res();
+                            }).catch(rej);
+                          }, 500);
+                          return;
+                        }
+                        copyDir(srcPath, targetPath).then(() => {
+                          // rmDir(srcPath);
+                          res();
+                        }).catch(err => {
+                          console.log(err);
+                          rej(err);
+                        });
+                      });
+                    });
+                    return Promise.all(promises);
+                  };
+                  setTimeout(() => {
+                    buildToProject().then(() => {
+                      resolve();
+                    }).catch(reject);
+                  }, 3000);
                 }
               });
             });
