@@ -44,33 +44,46 @@
         "node-workspace-builder.npmInstallationSelect": {
           "type": "string",
           "default": "external",
-          "enum": ["external", "integrated"],
+          "enum": [
+            "external",
+            "integrated"
+          ],
           "description": "Specify whitch npm installation to build with. The option `external` means using npm installation pre-installed on your PC, the option `integrated` means using npm integrated in this extension."
         }
       }
     },
-    "commands": [{
-      "command": "node-workspace-builder.buildWorkspace",
-      "title": "Build Workspace"
-    }, {
-      "command": "node-workspace-builder.watchProject",
-      "title": "Watch this project"
-    }],
+    "commands": [
+      {
+        "command": "node-workspace-builder.buildWorkspace",
+        "title": "Build Workspace"
+      },
+      {
+        "command": "node-workspace-builder.watchProject",
+        "title": "Watch this project"
+      }
+    ],
     "menus": {
-      "explorer/context": [{
-        "when": "resourceFilename == 'package.json'",
-        "command": "node-workspace-builder.watchProject",
-        "group": "navigation"
-      }, {
-        "when": "explorerResourceIsFolder && resourceFilename != 'node_modules'",
-        "command": "node-workspace-builder.watchProject",
-        "group": "navigation"
-      }]
+      "explorer/context": [
+        {
+          "when": "resourceFilename == 'package.json'",
+          "command": "node-workspace-builder.watchProject",
+          "group": "navigation"
+        },
+        {
+          "when": "explorerResourceIsFolder && resourceFilename != 'node_modules'",
+          "command": "node-workspace-builder.watchProject",
+          "group": "navigation"
+        }
+      ]
     },
-    "taskDefinitions": [{
-      "type": "build",
-      "required": ["task"]
-    }]
+    "taskDefinitions": [
+      {
+        "type": "build",
+        "required": [
+          "task"
+        ]
+      }
+    ]
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
@@ -84,11 +97,12 @@
     "vscode": "^1.1.28",
     "tslint": "^5.12.1",
     "@types/node": "^10.12.21",
-    "@types/npm": "^2.2.42",
     "@types/mocha": "^2.2.42"
   },
   "dependencies": {
+    "@types/npm": "latest",
     "@types/semver": "^6.0.0",
+    "npm": "latest",
     "semver": "^6.0.0"
   }
 }

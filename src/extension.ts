@@ -3,13 +3,11 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import * as npm from 'npm';
 
 import PackReader from './file/PackReader';
 import PathConstants from './constant/PathConstants';
 import CopyTask from './model/CopyTask';
 import Builder from './build/Builder';
-import { resolve } from 'dns';
 
 const packReader = new PackReader();
 

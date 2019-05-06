@@ -8,14 +8,16 @@ import TerminalHelper from '../terminal/TerminalHelper';
 import CopyTask from '../model/CopyTask';
 
 const rmDir = (src: string) => {
-  let paths = fs.readdirSync(src);
+  const paths = fs.readdirSync(src);
   const promises = paths.map(p => {
+    const _src = src + path.sep + p;
     return new Promise((resolve, reject) => {
-      const _src = src + path.sep + p;
       const stats = fs.statSync(_src);
-      if (stats.isFile()) {
-        fs.unlinkSync(_src);
-        resolve();
+      if (stats.isFile() || stats.isSymbolicLink()) {
+        console.log('delete file: ', _src);
+        fs.unlink(_src, err => {
+          err ? reject(err) : resolve();
+        });
       } else if (stats.isDirectory()) {
         rmDir(_src).then(() => {
           resolve();
@@ -23,9 +25,15 @@ const rmDir = (src: string) => {
       }
     });
   });
-  return Promise.all(promises).then(() => {
-    fs.rmdirSync(src);
-    return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    Promise.all(promises).then(() => {
+      const pathsa = fs.readdirSync(src);
+      setTimeout(() => {
+        fs.rmdir(src, (err => {
+          err ? reject(err) : resolve();
+        }));
+      }, 100);
+    }).catch(reject);
   });
 };
 
@@ -49,7 +57,7 @@ const copyDir = (src: string, dst: string) => {
             reject(err);
           }
           if (stats.isFile()) {
-            console.log('copy file path: ', _src);
+            console.log('copy file: ', _src);
             let readable = fs.createReadStream(_src);
             let writable = fs.createWriteStream(_dst);
             readable.pipe(writable);
@@ -221,7 +229,7 @@ export default class Builder {
                           return;
                         }
                         copyDir(srcPath, targetPath).then(() => {
-                          // rmDir(srcPath);
+                          rmDir(srcPath);
                           res();
                         }).catch(err => {
                           console.log(err);
