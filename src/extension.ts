@@ -1,13 +1,13 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
-import * as fs from 'fs';
-import * as path from 'path';
+import { sep } from 'path';
 import * as vscode from 'vscode';
 
-import PackReader from './pack/PackReader';
+import PackReader from './util/PackReader';
 import PathConstants from './constant/PathConstants';
 import CopyTask from './model/CopyTask';
-import Builder from './build/Builder';
+import Builder from './util/Builder';
+import FsHelper from './util/FsHelper';
 
 const packReader = new PackReader();
 
@@ -62,6 +62,9 @@ export function activate(context: vscode.ExtensionContext) {
 	// Use the console to output diagnostic information (console.log) and errors (console.error)
 	// This line of code will only be executed once when your extension is activated
 	console.log('Congratulations, your extension "node-workspace-builder" is now active!');
+	const output = vscode.window.createOutputChannel('Node Workspace Builder')
+	FsHelper.setOutput(output);
+	Builder.setOutput(output);
 
 	let build = vscode.commands.registerCommand('node-workspace-builder.buildWorkspace', () => {
 		buildFunction(packReader.projects, packReader.tasks);
@@ -72,21 +75,21 @@ export function activate(context: vscode.ExtensionContext) {
 			vscode.window.showWarningMessage('This is a dependency installation folder. Workspace builder will not watch this.');
 			return;
 		}
-		if (e.fsPath.indexOf(PathConstants.PACK_JSON) >= 0) {
-			fs.writeFileSync(e.fsPath.replace(PathConstants.PACK_JSON, PathConstants.PLACEHOLDER), '');
-			prepare().then(() => {
-				buildFunction(packReader.projects, packReader.tasks);
-			});
-		} else {
-			if (fs.existsSync(e.fsPath + path.sep + PathConstants.PACK_JSON)) {
-				fs.writeFileSync(e.fsPath + path.sep + PathConstants.PLACEHOLDER, '');
-				prepare().then(() => {
-					buildFunction(packReader.projects, packReader.tasks);
-				});
-			} else {
-				vscode.window.showWarningMessage('There is no package.json file found. This folder is not a node project folder.');
-			}
+		const isPackJson = e.fsPath.includes(PathConstants.PACK_JSON);
+		const includesPackJson = FsHelper.exists(`${e.fsPath}${sep}${PathConstants.PACK_JSON}`);
+		if (!isPackJson && !includesPackJson) {
+			vscode.window.showWarningMessage('There is no package.json file found. This folder is not a node project folder.');
+			return;
 		}
+
+		const file = isPackJson
+			? e.fsPath.replace(PathConstants.PACK_JSON, PathConstants.PLACEHOLDER)
+			: `${e.fsPath}${sep}${PathConstants.PLACEHOLDER}`;
+
+		FsHelper.writeFile(file, '');
+		prepare().then(() => {
+			buildFunction(packReader.projects, packReader.tasks);
+		});
 	});
 
 	context.subscriptions.push(build);
