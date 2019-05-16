@@ -84,8 +84,9 @@ export default class Builder {
           return new Promise((resolve, reject) => {
             if (!FsHelper.isDirectory(`${projectPath}${PathConstants.NODE_MODULES}`)) {
               needInstallAll = true;
+              Builder.output.appendLine(`Start installing: ${projectPath}`);
               npm.commands.explore([projectPath, 'npm install'], (err, data) => {
-                err ? reject(err) : resolve();
+                err ? reject(new Error('Install failed: ' + projectPath)) : resolve();
               });
             } else {
               resolve();
@@ -134,10 +135,10 @@ export default class Builder {
                         }, 500);
                         return;
                       }
-                      FsHelper.copyDir(srcPath, targetPath).then(() => {
+                      FsHelper.copy(srcPath, targetPath).then(() => {
                         FsHelper.rmDir(srcPath);
                         res();
-                      }).catch(err => {
+                      }).catch((err: any) => {
                         console.log(err);
                         rej(err);
                       });

@@ -81,41 +81,45 @@ export default class FsHelper {
     });
   }
 
-  static copyDir(src: string, dst: string) {
-    let paths = fs.readdirSync(src);
-    return new Promise((resolve, reject) => {
-      if (fs.existsSync(dst)) {
-        resolve(paths);
-      } else {
-        fs.mkdir(dst, err => {
-          err ? reject(err) : resolve(paths);
-        });
-      }
-    }).then(() => {
-      const promises = paths.map(p => {
-        return new Promise((resolve, reject) => {
+  static copy(src: string, dst: string) {
+    return new Promise<Array<string> | undefined>((resolve, reject) => {
+      fs.stat(src, (err, stats) => {
+        if (err) {
+          return reject(err);
+        }
+        console.log(stats.isFile());
+        if (stats.isFile()) {
+          FsHelper.output.appendLine(`Copy file: ${src} -> ${dst}`);
+          let readable = fs.createReadStream(src);
+          let writable = fs.createWriteStream(dst);
+          readable.pipe(writable);
+          return resolve();
+        } else if (stats.isDirectory()) {
+          const paths = fs.readdirSync(src);
+          if (fs.existsSync(dst)) {
+            resolve(paths);
+          } else {
+            fs.mkdir(dst, err => {
+              err ? reject(err) : resolve(paths);
+            });
+          }
+        }
+      });
+    }).then((paths: Array<string> | undefined) => {
+      if (paths !== undefined && paths !== null) {
+        const promises = paths.map(p => {
           const _src = src + path.sep + p;
           const _dst = dst + path.sep + p;
-          fs.stat(_src, (err, stats) => {
-            if (err) {
-              reject(err);
-            }
-            if (stats.isFile()) {
-              FsHelper.output.appendLine(`Copy file: ${_src}`);
-              let readable = fs.createReadStream(_src);
-              let writable = fs.createWriteStream(_dst);
-              readable.pipe(writable);
+          return new Promise((resolve, reject) => {
+            FsHelper.copy(_src, _dst).then(() => {
               resolve();
-            } else if (stats.isDirectory()) {
-              FsHelper.copyDir(_src, _dst).then(() => {
-                resolve();
-              }).catch(reject);
-            }
+            }).catch(reject);
           });
         });
-      });
-      return Promise.all(promises);
-    }).catch(err => {
+        return Promise.all(promises);
+      }
+      return Promise.resolve([]);
+    }).catch((err: any) => {
       console.log(err);
     });
   }
