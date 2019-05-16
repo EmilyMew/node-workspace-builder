@@ -1,7 +1,18 @@
+/*
+ * $Id:$
+ * Copyright 2018 Emily36107@outlook.com All rights reserved.
+ */
 import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
 
+
+/**
+ * fs helper.
+ *
+ * @author Emily Wang
+ * @since 2019.04.30
+ */
 export default class FsHelper {
 
   private static output: vscode.OutputChannel;
@@ -44,40 +55,43 @@ export default class FsHelper {
     fs.mkdirSync(src, options);
   }
 
-  static rm(src: string): void {
-    fs.unlinkSync(src);
-  }
-
   static writeFile(dst: string, data: string) {
     fs.writeFileSync(dst, data);
   }
 
-  static rmDir(src: string) {
-    const paths = fs.readdirSync(src);
-    const promises = paths.map(p => {
-      const _src = src + path.sep + p;
-      return new Promise((resolve, reject) => {
-        const stats = fs.statSync(_src);
-        if (stats.isFile() || stats.isSymbolicLink()) {
-          FsHelper.output.appendLine(`Delete file: ${_src}`);
-          fs.unlink(_src, err => {
-            err ? reject(err) : resolve();
+  static rm(src: string) {
+    return new Promise<Array<string> | undefined>((resolve, reject) => {
+      const stats = fs.statSync(src);
+      if (stats.isFile() || stats.isSymbolicLink()) {
+        FsHelper.output.appendLine(`Delete file: ${src}`);
+        fs.unlink(src, err => {
+          err ? reject(err) : resolve();
+        });
+      } else if (stats.isDirectory()) {
+        resolve(fs.readdirSync(src));
+      }
+    }).then((paths: Array<string> | undefined) => {
+      if (paths !== undefined && paths !== null) {
+        const promises = paths.map(p => {
+          const _src = src + path.sep + p;
+          return new Promise((res, rej) => {
+            FsHelper.rm(_src).then(() => {
+              res();
+            }).catch(rej);
           });
-        } else if (stats.isDirectory()) {
-          FsHelper.rmDir(_src).then(() => {
-            resolve();
+        });
+        return new Promise((resolve, reject) => {
+          return Promise.all(promises).then(() => {
+            setTimeout(() => {
+              fs.rmdir(src, (err => {
+                err ? reject(err) : resolve();
+              }));
+            }, 200);
           }).catch(reject);
-        }
-      });
-    });
-    return new Promise((resolve, reject) => {
-      Promise.all(promises).then(() => {
-        setTimeout(() => {
-          fs.rmdir(src, (err => {
-            err ? reject(err) : resolve();
-          }));
-        }, 100);
-      }).catch(reject);
+        });
+      } else {
+        return Promise.resolve({});
+      }
     });
   }
 

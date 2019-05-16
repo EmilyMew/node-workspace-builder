@@ -1,3 +1,14 @@
+/*
+ * $Id:$
+ * Copyright 2018 Emily36107@outlook.com All rights reserved.
+ */
+
+/**
+ * copy task model.
+ *
+ * @author Emily Wang
+ * @since 2019.04.30
+ */
 export default class CopyTask {
   public projectDepPath: string;
   public modulePath: string;

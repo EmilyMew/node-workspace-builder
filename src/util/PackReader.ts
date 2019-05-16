@@ -1,4 +1,7 @@
-
+/*
+ * $Id:$
+ * Copyright 2018 Emily36107@outlook.com All rights reserved.
+ */
 import { sep } from 'path';
 import * as semver from 'semver';
 
@@ -27,6 +30,13 @@ const getAllPackDeps = (pack: Pack, packMap: Map<string, Pack>, projectPack: Pac
 
 };
 
+
+/**
+ * pacakge reader.
+ *
+ * @author Emily Wang
+ * @since 2019.04.30
+ */
 export default class PackReader {
 
   public projects: Array<string> = new Array<string>();

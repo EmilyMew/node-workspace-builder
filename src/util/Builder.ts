@@ -1,3 +1,7 @@
+/*
+ * $Id:$
+ * Copyright 2018 Emily36107@outlook.com All rights reserved.
+ */
 import { sep } from 'path';
 import * as npm from 'npm';
 import * as vscode from 'vscode';
@@ -7,6 +11,13 @@ import TerminalHelper from './TerminalHelper';
 import PathConstants from '../constant/PathConstants';
 import CopyTask from '../model/CopyTask';
 
+
+/**
+ * builder.
+ *
+ * @author Emily Wang
+ * @since 2019.04.30
+ */
 export default class Builder {
 
   private static output: vscode.OutputChannel;
@@ -116,7 +127,7 @@ export default class Builder {
                   FsHelper.rm(`${task.modulePath}${PathConstants.PACK_LOCK_JSON}`);
                 }
                 if (FsHelper.exists(`${task.modulePath}${PathConstants.NODE_MODULES}`)) {
-                  FsHelper.rmDir(`${task.modulePath}${PathConstants.NODE_MODULES}`);
+                  FsHelper.rm(`${task.modulePath}${PathConstants.NODE_MODULES}`);
                 }
                 const buildToProject = () => {
                   const promises = task.files.map(file => {
@@ -136,7 +147,7 @@ export default class Builder {
                         return;
                       }
                       FsHelper.copy(srcPath, targetPath).then(() => {
-                        FsHelper.rmDir(srcPath);
+                        FsHelper.rm(srcPath);
                         res();
                       }).catch((err: any) => {
                         console.log(err);

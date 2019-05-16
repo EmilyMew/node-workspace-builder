@@ -1,3 +1,14 @@
+/*
+ * $Id:$
+ * Copyright 2018 Emily36107@outlook.com All rights reserved.
+ */
+
+/**
+ * path constants.
+ *
+ * @author Emily Wang
+ * @since 2019.04.30
+ */
 export default class PathConstants {
   public static NODE_MODULES = 'node_modules';
   public static GIT = '\.git';

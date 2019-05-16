@@ -1,6 +1,17 @@
+/*
+ * $Id:$
+ * Copyright 2018 Emily36107@outlook.com All rights reserved.
+ */
 import * as os from 'os';
 import * as vscode from 'vscode';
 
+
+/**
+ * terminal helper.
+ *
+ * @author Emily Wang
+ * @since 2019.04.30
+ */
 export default class TerminalHelper {
   public static TERMINAL_NAME_NODE = 'node';
   public static TERMINAL_NAME = 'node-workspace-builder';
