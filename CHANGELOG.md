@@ -2,6 +2,9 @@
 
 All notable changes to the "Node Workspace Builder" extension will be documented in this file.
 
+## 0.1.3
+- `Fixed` Sometimes stacks on 'Building modules...'.
+
 ## 0.1.2
 - `Added` Create output channel and display status on progress bar while building with integrated npm.
 

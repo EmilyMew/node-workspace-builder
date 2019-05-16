@@ -92,6 +92,8 @@ export default class FsHelper {
       } else {
         return Promise.resolve({});
       }
+    }).catch((err: any) => {
+      FsHelper.output.appendLine(err);
     });
   }
 
@@ -133,7 +135,7 @@ export default class FsHelper {
       }
       return Promise.resolve([]);
     }).catch((err: any) => {
-      console.log(err);
+      FsHelper.output.appendLine(err);
     });
   }
 }
