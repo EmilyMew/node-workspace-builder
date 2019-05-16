@@ -84,7 +84,7 @@ export default class Builder {
           return new Promise((resolve, reject) => {
             if (!FsHelper.isDirectory(`${projectPath}${PathConstants.NODE_MODULES}`)) {
               needInstallAll = true;
-              npm.commands.install([projectPath], (err, data) => {
+              npm.commands.explore([projectPath, 'npm install'], (err, data) => {
                 err ? reject(err) : resolve();
               });
             } else {
@@ -101,7 +101,7 @@ export default class Builder {
               ? false
               : !FsHelper.isDirectory(`${task.modulePath}${PathConstants.NODE_MODULES}`);
             needInstallDep
-              ? npm.commands.install([task.modulePath], (err, data) => err ? reject(err) : resolve())
+              ? npm.commands.explore([task.modulePath, 'npm install'], (err, data) => err ? reject(err) : resolve())
               : resolve();
           }).then(() => {
             progress.report({ message: 'Building modules...' });
