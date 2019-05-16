@@ -87,7 +87,6 @@ export default class FsHelper {
         if (err) {
           return reject(err);
         }
-        console.log(stats.isFile());
         if (stats.isFile()) {
           FsHelper.output.appendLine(`Copy file: ${src} -> ${dst}`);
           let readable = fs.createReadStream(src);
