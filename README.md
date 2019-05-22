@@ -34,3 +34,11 @@ This extension contributes the following settings:
 * `node-workspace-builder.autoBuildOnFoldersChanged`: Specify if build the whole workspace on workspace folders changed.
 * `node-workspace-builder.buildModulesWithoutInstall`: For whose modules does not need install dependencies before building, specifying this to `true`, you can run build scripts directly.
 * `node-workspace-builder.npmInstallationSelect`: Specify whitch npm installation to build with. The option `external` means using npm installation pre-installed on your PC, the option `integrated` means using npm integrated in this extension.
+
+## Keyboard Shortcuts
+
+This extension contributes the following keyboard shortcuts:
+
+* `Ctrl` + `Alt` + `B`: Build all project in the whole workspace.
+* `Shift` + `Alt` + `W`: Watch selected projects.
+* `Shift` + `Alt` + `B`: Build selected projects (you must watch them first or projects not watched will not be built).
