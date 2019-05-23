@@ -29,6 +29,7 @@ Sometimes though it was successfully built but does not affect immediatly if you
 ## Extension Settings
 
 This extension contributes the following settings:
+
 | Settings                                            | Description                                                                                           |
 |-----------------------------------------------------|-------------------------------------------------------------------------------------------------------|
 | `node-workspace-builder.autoBuildOnSave`            | Specify if build the whole workspace on saving text documents.                                        |
