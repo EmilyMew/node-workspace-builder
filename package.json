@@ -2,7 +2,7 @@
   "name": "node-workspace-builder",
   "displayName": "Node Workspace Builder",
   "description": "This extension helps you to sync your source code to projects' dependencies folders which depends on it automatically. ",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "author": "EmilyWang",
   "publisher": "EmilyWang",
   "repository": {
@@ -54,78 +54,61 @@
         }
       }
     },
-    "commands": [
-      {
-        "command": "node-workspace-builder.buildWorkspace",
-        "title": "Build Workspace"
-      },
-      {
-        "command": "node-workspace-builder.watchProject",
-        "title": "Watch this project"
-      },
-      {
-        "command": "node-workspace-builder.buildProject",
-        "title": "Build this project"
-      }
-    ],
+    "commands": [{
+      "command": "node-workspace-builder.buildWorkspace",
+      "title": "Build Workspace"
+    }, {
+      "command": "node-workspace-builder.watchProject",
+      "title": "Watch this project"
+    }, {
+      "command": "node-workspace-builder.buildProject",
+      "title": "Build this project"
+    }],
     "menus": {
-      "explorer/context": [
-        {
-          "when": "resourceFilename == 'package.json'",
-          "command": "node-workspace-builder.watchProject",
-          "group": "nwbgroup@1"
-        },
-        {
-          "when": "explorerResourceIsFolder && resourceFilename != 'node_modules'",
-          "command": "node-workspace-builder.watchProject",
-          "group": "nwbgroup@1"
-        },
-        {
-          "when": "resourceFilename == 'package.json'",
-          "command": "node-workspace-builder.buildProject",
-          "group": "nwbgroup@2"
-        },
-        {
-          "when": "explorerResourceIsFolder && resourceFilename != 'node_modules'",
-          "command": "node-workspace-builder.buildProject",
-          "group": "nwbgroup@2"
-        }
-      ]
+      "explorer/context": [{
+        "when": "resourceFilename == 'package.json'",
+        "command": "node-workspace-builder.watchProject",
+        "group": "nwbgroup@1"
+      }, {
+        "when": "explorerResourceIsFolder && resourceFilename != 'node_modules'",
+        "command": "node-workspace-builder.watchProject",
+        "group": "nwbgroup@1"
+      }, {
+        "when": "resourceFilename == 'package.json'",
+        "command": "node-workspace-builder.buildProject",
+        "group": "nwbgroup@2"
+      }, {
+        "when": "explorerResourceIsFolder && resourceFilename != 'node_modules'",
+        "command": "node-workspace-builder.buildProject",
+        "group": "nwbgroup@2"
+      }]
     },
-    "keybindings": [
-      {
-        "command": "node-workspace-builder.buildWorkspace",
-        "key": "ctrl+alt+b"
-      },
-      {
-        "command": "node-workspace-builder.watchProject",
-        "key": "shift+alt+w",
-        "when": "resourceFilename == 'package.json'"
-      },
-      {
-        "command": "node-workspace-builder.watchProject",
-        "key": "shift+alt+w",
-        "when": "explorerResourceIsFolder && resourceFilename != 'node_modules'"
-      },
-      {
-        "command": "node-workspace-builder.buildProject",
-        "key": "shift+alt+b",
-        "when": "resourceFilename == 'package.json'"
-      },
-      {
-        "command": "node-workspace-builder.buildProject",
-        "key": "shift+alt+b",
-        "when": "explorerResourceIsFolder && resourceFilename != 'node_modules'"
-      }
-    ],
-    "taskDefinitions": [
-      {
-        "type": "build",
-        "required": [
-          "task"
-        ]
-      }
-    ]
+    "keybindings": [{
+      "command": "node-workspace-builder.buildWorkspace",
+      "key": "ctrl+alt+b"
+    }, {
+      "command": "node-workspace-builder.watchProject",
+      "key": "shift+alt+w",
+      "when": "resourceFilename == 'package.json'"
+    }, {
+      "command": "node-workspace-builder.watchProject",
+      "key": "shift+alt+w",
+      "when": "explorerResourceIsFolder && resourceFilename != 'node_modules'"
+    }, {
+      "command": "node-workspace-builder.buildProject",
+      "key": "shift+alt+b",
+      "when": "resourceFilename == 'package.json'"
+    }, {
+      "command": "node-workspace-builder.buildProject",
+      "key": "shift+alt+b",
+      "when": "explorerResourceIsFolder && resourceFilename != 'node_modules'"
+    }],
+    "taskDefinitions": [{
+      "type": "build",
+      "required": [
+        "task"
+      ]
+    }]
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",

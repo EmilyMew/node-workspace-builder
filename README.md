@@ -13,6 +13,13 @@
 
 This extension helps you to sync your source code to projects' dependencies folders which depends on it automatically. Only works when your source module and your projects are in the same workspace.
 
+If you think this extension is useful and would like to buy me a juice:
+<p>
+  <a href="https://paypal.me/emily36107">
+    <img src="https://img.shields.io/badge/donate-paypal-brightgreen.svg">
+  </a>
+</p>
+
 ## Features
 
 To watch project dependencies, put a `.nodedwswatcher` file in the project folder together with the `package.json` file.

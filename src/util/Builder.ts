@@ -21,13 +21,21 @@ import CopyTask from '../model/CopyTask';
  */
 export default class Builder {
 
+  private static building: boolean = false;
+
   private static output: vscode.OutputChannel;
 
   static setOutput(output: vscode.OutputChannel): void {
     Builder.output = output;
   }
 
-  static terminalBuild(projects: Array<string>, tasks: Array<CopyTask>): Thenable<any> {
+  /**
+   * Build via terminal commands.
+   * 
+   * @param projects - project paths
+   * @param tasks - copy file tasks
+   */
+  private static terminalBuild(projects: Array<string>, tasks: Array<CopyTask>): Thenable<any> {
     const modules = distinct(tasks, 'modulePath');
     const configuration = vscode.workspace.getConfiguration('node-workspace-builder');
     return vscode.window.withProgress({
@@ -91,7 +99,13 @@ export default class Builder {
     });
   }
 
-  static npmBuild(projects: Array<string>, tasks: Array<CopyTask>): Thenable<any> {
+  /**
+   * Build via npm integrated.
+   * 
+   * @param projects - project paths
+   * @param tasks - copy file tasks
+   */
+  private static npmBuild(projects: Array<string>, tasks: Array<CopyTask>): Thenable<any> {
     const modules = distinct(tasks, 'modulePath');
     const configuration = vscode.workspace.getConfiguration('node-workspace-builder');
     return vscode.window.withProgress({
@@ -213,4 +227,29 @@ export default class Builder {
     });
   }
 
+  /**
+   * Start build task.
+   *
+   * @param projects - project paths
+   * @param tasks - copy file tasks
+   */
+  public static build(projects: Array<string>, tasks: Array<CopyTask>) {
+    const configuration = vscode.workspace.getConfiguration('node-workspace-builder');
+    new Promise((resolve, reject) => {
+      if (Builder.building) {
+        return reject(new Error('You currently have a build task running. Please wait until finished.'));
+      }
+      Builder.building = true;
+      return resolve();
+    }).then(() => {
+      return configuration.get('npmInstallationSelect') === 'integrated' ?
+        Builder.npmBuild(projects, tasks) : Builder.terminalBuild(projects, tasks);
+    }).catch(err => {
+      console.error(err);
+      Builder.output.appendLine(err);
+      vscode.window.showErrorMessage(err.message);
+    }).finally(() => {
+      Builder.building = false;
+    });
+  }
 }

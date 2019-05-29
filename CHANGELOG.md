@@ -2,6 +2,9 @@
 
 All notable changes to the "Node Workspace Builder" extension will be documented in this file.
 
+## 0.1.5
+- `Fixed` Always getting an error showing `You currently have a build task running. Please wait until finished.` after a failed building.
+
 ## 0.1.4
 - `Added` You can build a specified project via context menu now.
 - `Added` Added keyboard shotcuts. Use `Ctrl` + `Alt` + `B` to build all project in the whole workspace, `Shift` + `Alt` + `W` to watch selected projects, and `Shift` + `Alt` + `B` to build selected projects (you must watch them first or projects not watched will not be built).

@@ -14,67 +14,24 @@ import PathConstants from './constant/PathConstants';
 import CopyTask from './model/CopyTask';
 import Builder from './util/Builder';
 import FsHelper from './util/FsHelper';
-import { rejects } from 'assert';
 
 const packReader = new PackReader();
 
-const prepare = (): Promise<undefined> => {
-	return new Promise((resolve) => {
-		const root = vscode.workspace.rootPath;
-		if (root !== undefined && root !== null) {
-			packReader.scan(root, PathConstants.PLACEHOLDER, [PathConstants.NODE_MODULES, PathConstants.GIT]).then(placeholders => {
-				packReader.projects.splice(0, packReader.projects.length, ...placeholders.map(filePath => filePath.replace(PathConstants.PLACEHOLDER, '')));
-				packReader.scan(root, PathConstants.PACK_JSON, [PathConstants.NODE_MODULES, PathConstants.GIT]).then(packFiles => {
-					packReader.prepareCopyTasks(placeholders, packFiles);
-					resolve();
-				});
-			});
-		}
-	});
-};
-
-let building = false;
-
-const buildFunction = (projects: Array<string>, tasks: Array<CopyTask>) => {
-	const configuration = vscode.workspace.getConfiguration('node-workspace-builder');
-	new Promise((resolve, reject) => {
-		if (building) {
-			return reject(new Error('You currently have a build task running. Please wait until finished.'));
-		}
-		building = true;
-		resolve();
-	}).then(() => {
-		if (configuration.get('npmInstallationSelect') === 'integrated') {
-			return Builder.npmBuild(projects, tasks).then(() => {
-				building = false;
-				return Promise.resolve();
-			});
-		} else {
-			return Builder.terminalBuild(projects, tasks).then(() => {
-				building = false;
-				return Promise.resolve();
-			});
-		}
-	}).catch(err => {
-		console.error(err);
-		vscode.window.showErrorMessage(err.message);
-	});
-};
+const output = vscode.window.createOutputChannel('Node Workspace Builder');
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
-	prepare();
+	packReader.prepare(vscode.workspace.rootPath);
 
 	// Use the console to output diagnostic information (console.log) and errors (console.error)
 	// This line of code will only be executed once when your extension is activated
 	console.log('Congratulations, your extension "node-workspace-builder" is now active!');
-	const output = vscode.window.createOutputChannel('Node Workspace Builder');
 	FsHelper.setOutput(output);
 	Builder.setOutput(output);
 
 	let build = vscode.commands.registerCommand('node-workspace-builder.buildWorkspace', () => {
-		buildFunction(packReader.projects, packReader.tasks);
+		Builder.build(packReader.projects, packReader.tasks);
 	});
 
 	let watch = vscode.commands.registerCommand('node-workspace-builder.watchProject', (uri: vscode.Uri) => {
@@ -89,8 +46,10 @@ export function activate(context: vscode.ExtensionContext) {
 				resolve([uri]);
 			}
 		}).then((realUris: Array<vscode.Uri>) => {
+			const pattern = /node_modules/g;
 			const promises = realUris.filter(f => {
-				if (/node_modules/.test(f.fsPath)) {
+				const isNodeModules = pattern.test(f.fsPath);
+				if (isNodeModules) {
 					output.appendLine('This is a dependency installation folder. Workspace builder will not watch this: ' + f.fsPath);
 				}
 				const isPackJson = f.fsPath.includes(PathConstants.PACK_JSON);
@@ -98,7 +57,7 @@ export function activate(context: vscode.ExtensionContext) {
 				if (!isPackJson && !includesPackJson) {
 					output.appendLine('There is no package.json file found. This folder is not a node project folder: ' + f.fsPath);
 				}
-				return !/node_modules/.test(f.fsPath) && (isPackJson || includesPackJson);
+				return !isNodeModules && (isPackJson || includesPackJson);
 			}).map(realUri => {
 				const isPackJson = realUri.fsPath.includes(PathConstants.PACK_JSON);
 				const file = isPackJson
@@ -108,9 +67,11 @@ export function activate(context: vscode.ExtensionContext) {
 				FsHelper.writeFile(file, '');
 				return Promise.resolve();
 			});
-			return Promise.all(promises).then(prepare);
+			return Promise.all(promises).then(() => {
+				return packReader.prepare(vscode.workspace.rootPath);
+			});
 		}).then(() => {
-			buildFunction(packReader.projects, packReader.tasks);
+			Builder.build(packReader.projects, packReader.tasks);
 		}).catch(err => {
 			vscode.window.showWarningMessage(err.message);
 		});
@@ -128,8 +89,10 @@ export function activate(context: vscode.ExtensionContext) {
 				resolve([uri]);
 			}
 		}).then((realUris: Array<vscode.Uri>) => {
+			const pattern = /node_modules/g;
 			const promises = realUris.filter(f => {
-				if (/node_modules/.test(f.fsPath)) {
+				const isNodeModules = pattern.test(f.fsPath);
+				if (isNodeModules) {
 					output.appendLine('This is a dependency installation folder. Workspace builder will not watch this: ' + f.fsPath);
 				}
 				const isPackJson = f.fsPath.includes(PathConstants.PACK_JSON);
@@ -137,7 +100,7 @@ export function activate(context: vscode.ExtensionContext) {
 				if (!isPackJson && !includesPackJson) {
 					output.appendLine('There is no package.json file found. This folder is not a node project folder: ' + f.fsPath);
 				}
-				return !/node_modules/.test(f.fsPath) && (isPackJson || includesPackJson);
+				return !isNodeModules && (isPackJson || includesPackJson);
 			}).map(realUri => {
 				const isPackJson = realUri.fsPath.includes(PathConstants.PACK_JSON);
 				const file = isPackJson ? realUri.fsPath.replace(PathConstants.PACK_JSON, '') : `${realUri.fsPath}${sep}`;
@@ -149,7 +112,7 @@ export function activate(context: vscode.ExtensionContext) {
 			files.forEach(file => {
 				tasks.splice(tasks.length, 0, ...packReader.tasks.filter(f => f.projectDepPath.includes(file)));
 			});
-			buildFunction(files, tasks);
+			Builder.build(files, tasks);
 		}).catch(err => {
 			vscode.window.showErrorMessage(err.message);
 		});
@@ -181,21 +144,20 @@ export function activate(context: vscode.ExtensionContext) {
 				}
 			}
 			if (needRebuild) {
-				needReprepare ? prepare().then(() => {
-					buildFunction(packReader.projects, packReader.tasks);
-				}) : buildFunction(packReader.projects, tasks);
+				needReprepare ? packReader.prepare(vscode.workspace.rootPath).then(() => {
+					Builder.build(packReader.projects, packReader.tasks);
+				}) : Builder.build(packReader.projects, tasks);
 			}
 		}
 	});
 	vscode.workspace.onDidChangeWorkspaceFolders(() => {
 		const configuration = vscode.workspace.getConfiguration('node-workspace-builder');
 		if (configuration.get('autoBuildOnFoldersChanged')) {
-			prepare().then(() => {
-				buildFunction(packReader.projects, packReader.tasks);
+			packReader.prepare(vscode.workspace.rootPath).then(() => {
+				Builder.build(packReader.projects, packReader.tasks);
 			});
 		}
 	});
-
 }
 
 // this method is called when your extension is deactivated
