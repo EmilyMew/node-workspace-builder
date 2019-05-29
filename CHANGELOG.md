@@ -3,6 +3,9 @@
 All notable changes to the "Node Workspace Builder" extension will be documented in this file.
 
 ## 0.1.5
+- `Added` Multi-root workspace is supported now.
+
+## 0.1.5
 - `Fixed` Always getting an error showing `You currently have a build task running. Please wait until finished.` after a failed building.
 
 ## 0.1.4

@@ -72,45 +72,51 @@ export default class PackReader {
   /**
    * prepare tasks
    * 
-   * @param root vscode workspace root path
+   * @param roots vscode workspace root paths
    */
-  prepare(root: string | undefined): Promise<undefined> {
-    return new Promise((resolve) => {
-      if (root !== undefined && root !== null) {
-        scan(root, PathConstants.PLACEHOLDER, [PathConstants.NODE_MODULES, PathConstants.GIT]).then(placeholders => {
-          this.projects.splice(0, this.projects.length, ...placeholders.map(filePath => filePath.replace(PathConstants.PLACEHOLDER, '')));
-          scan(root, PathConstants.PACK_JSON, [PathConstants.NODE_MODULES, PathConstants.GIT]).then(packFiles => {
-            this.watchPaths = new Array<string>();
-            packFiles.forEach(filePath => {
-              let pack = require(filePath);
-              let dependencies = new Array<Dep>();
-              if (pack.dependencies !== null && pack.dependencies !== undefined) {
-                Object.keys(pack.dependencies).forEach((key: string) => {
-                  const dep = new Dep(key, pack.dependencies[key]);
-                  dependencies.push(dep);
-                });
-              }
-              const watch = placeholders.includes(filePath.replace(PathConstants.PACK_JSON, PathConstants.PLACEHOLDER));
-              if (watch) {
-                this.watchPaths.push(filePath);
-              }
-              this.packMap.set(pack.name, new Pack(filePath, watch, pack.version, pack.files, dependencies));
+  prepare(roots: Array<string>): Promise<unknown[]> {
+    this.watchPaths = new Array<string>();
+    this.projects = new Array<string>();
+    const promises = roots.map(root => {
+      return new Promise((resolve) => {
+        if (root === undefined || root === null) {
+          resolve();
+        } else {
+          scan(root, PathConstants.PLACEHOLDER, [PathConstants.NODE_MODULES, PathConstants.GIT]).then(placeholders => {
+            this.projects.splice(this.projects.length, 0, ...placeholders.map(filePath => filePath.replace(PathConstants.PLACEHOLDER, '')));
+            scan(root, PathConstants.PACK_JSON, [PathConstants.NODE_MODULES, PathConstants.GIT]).then(packFiles => {
+              packFiles.forEach(filePath => {
+                let pack = require(filePath);
+                let dependencies = new Array<Dep>();
+                if (pack.dependencies !== null && pack.dependencies !== undefined) {
+                  Object.keys(pack.dependencies).forEach((key: string) => {
+                    const dep = new Dep(key, pack.dependencies[key]);
+                    dependencies.push(dep);
+                  });
+                }
+                const watch = placeholders.includes(filePath.replace(PathConstants.PACK_JSON, PathConstants.PLACEHOLDER));
+                if (watch) {
+                  this.watchPaths.push(filePath);
+                }
+                this.packMap.set(pack.name, new Pack(filePath, watch, pack.version, pack.files, dependencies));
+              });
+              const taskQueue = new Array<CopyTask>();
+              this.packMap.forEach((value: Pack, key: string) => {
+                if (!value.watch) {
+                  return;
+                }
+                taskQueue.splice(taskQueue.length, 0, ...getAllPackDeps(value, this.packMap, value));
+              });
+              this.watchPaths.splice(0, this.watchPaths.length, PathConstants.PACK_JSON, ...taskQueue.map((task: CopyTask) => {
+                return task.modulePath;
+              }));
+              this.tasks = taskQueue;
+              resolve();
             });
-            const taskQueue = new Array<CopyTask>();
-            this.packMap.forEach((value: Pack, key: string) => {
-              if (!value.watch) {
-                return;
-              }
-              taskQueue.splice(taskQueue.length, 0, ...getAllPackDeps(value, this.packMap, value));
-            });
-            this.watchPaths.splice(0, this.watchPaths.length, PathConstants.PACK_JSON, ...taskQueue.map((task: CopyTask) => {
-              return task.modulePath;
-            }));
-            this.tasks = taskQueue;
-            resolve();
           });
-        });
-      }
+        }
+      });
     });
+    return Promise.all(promises);
   }
 }

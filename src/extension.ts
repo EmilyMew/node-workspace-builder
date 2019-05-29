@@ -22,7 +22,8 @@ const output = vscode.window.createOutputChannel('Node Workspace Builder');
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
-	packReader.prepare(vscode.workspace.rootPath);
+	const folders = vscode.workspace.workspaceFolders === undefined ? [] : vscode.workspace.workspaceFolders.map(folder => folder.uri.fsPath);
+	packReader.prepare(folders);
 
 	// Use the console to output diagnostic information (console.log) and errors (console.error)
 	// This line of code will only be executed once when your extension is activated
@@ -31,7 +32,7 @@ export function activate(context: vscode.ExtensionContext) {
 	Builder.setOutput(output);
 
 	let build = vscode.commands.registerCommand('node-workspace-builder.buildWorkspace', () => {
-		Builder.build(packReader.projects, packReader.tasks);
+		Builder.build(packReader);
 	});
 
 	let watch = vscode.commands.registerCommand('node-workspace-builder.watchProject', (uri: vscode.Uri) => {
@@ -68,10 +69,10 @@ export function activate(context: vscode.ExtensionContext) {
 				return Promise.resolve();
 			});
 			return Promise.all(promises).then(() => {
-				return packReader.prepare(vscode.workspace.rootPath);
+				return packReader.prepare(folders);
 			});
 		}).then(() => {
-			Builder.build(packReader.projects, packReader.tasks);
+			Builder.build(packReader);
 		}).catch(err => {
 			vscode.window.showWarningMessage(err.message);
 		});
@@ -91,16 +92,25 @@ export function activate(context: vscode.ExtensionContext) {
 		}).then((realUris: Array<vscode.Uri>) => {
 			const pattern = /node_modules/g;
 			const promises = realUris.filter(f => {
+				let result = true;
 				const isNodeModules = pattern.test(f.fsPath);
 				if (isNodeModules) {
 					output.appendLine('This is a dependency installation folder. Workspace builder will not watch this: ' + f.fsPath);
+					result = false;
+					return result;
 				}
 				const isPackJson = f.fsPath.includes(PathConstants.PACK_JSON);
 				const includesPackJson = FsHelper.exists(`${f.fsPath}${sep}${PathConstants.PACK_JSON}`);
 				if (!isPackJson && !includesPackJson) {
 					output.appendLine('There is no package.json file found. This folder is not a node project folder: ' + f.fsPath);
+					result = false;
+					return result;
 				}
-				return !isNodeModules && (isPackJson || includesPackJson);
+				result = isPackJson ? FsHelper.exists(f.fsPath.replace(PathConstants.PACK_JSON, PathConstants.PLACEHOLDER)) : FsHelper.exists(`${f.fsPath}${sep}${PathConstants.PLACEHOLDER}`);
+				if (!result) {
+					output.appendLine('This is not a watched project: ' + f.fsPath);
+				}
+				return result;
 			}).map(realUri => {
 				const isPackJson = realUri.fsPath.includes(PathConstants.PACK_JSON);
 				const file = isPackJson ? realUri.fsPath.replace(PathConstants.PACK_JSON, '') : `${realUri.fsPath}${sep}`;
@@ -144,17 +154,18 @@ export function activate(context: vscode.ExtensionContext) {
 				}
 			}
 			if (needRebuild) {
-				needReprepare ? packReader.prepare(vscode.workspace.rootPath).then(() => {
-					Builder.build(packReader.projects, packReader.tasks);
-				}) : Builder.build(packReader.projects, tasks);
+				needReprepare ? packReader.prepare(folders).then(() => {
+					Builder.build(packReader);
+				}) : Builder.build(packReader, tasks);
 			}
 		}
 	});
 	vscode.workspace.onDidChangeWorkspaceFolders(() => {
+		const changedFolders = vscode.workspace.workspaceFolders === undefined ? [] : vscode.workspace.workspaceFolders.map(folder => folder.uri.fsPath);
 		const configuration = vscode.workspace.getConfiguration('node-workspace-builder');
 		if (configuration.get('autoBuildOnFoldersChanged')) {
-			packReader.prepare(vscode.workspace.rootPath).then(() => {
-				Builder.build(packReader.projects, packReader.tasks);
+			packReader.prepare(changedFolders).then(() => {
+				Builder.build(packReader);
 			});
 		}
 	});

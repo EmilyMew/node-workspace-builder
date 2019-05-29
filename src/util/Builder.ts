@@ -11,6 +11,7 @@ import FsHelper from './FsHelper';
 import TerminalHelper from './TerminalHelper';
 import PathConstants from '../constant/PathConstants';
 import CopyTask from '../model/CopyTask';
+import PackReader from './PackReader';
 
 
 /**
@@ -141,7 +142,9 @@ export default class Builder {
               ? false
               : !FsHelper.isDirectory(`${modulePath}${PathConstants.NODE_MODULES}`);
             needInstallDep
-              ? npm.commands.explore([modulePath, 'npm install'], (err, data) => err ? reject(err) : resolve())
+              ? npm.commands.explore([modulePath, 'npm install'], (err, data) => {
+                err ? reject(new Error(`Error installing module: ${modulePath}, error: ${err}`)) : resolve();
+              })
               : resolve();
           });
         });
@@ -152,7 +155,7 @@ export default class Builder {
               Builder.output.appendLine(`Start building: ${modulePath}`);
               npm.commands.explore([modulePath, 'npm run build'], (err, data) => {
                 if (err) {
-                  return reject(err);
+                  return reject(new Error(`Error building module: ${modulePath}, error: ${err}`));
                 }
                 if (FsHelper.exists(`${modulePath}${PathConstants.PACK_LOCK_JSON}`)) {
                   FsHelper.rm(`${modulePath}${PathConstants.PACK_LOCK_JSON}`);
@@ -230,26 +233,58 @@ export default class Builder {
   /**
    * Start build task.
    *
+   * @param packReader - packreader
+   */
+  static build(packReader: PackReader): any;
+
+  /**
+   * Start build task.
+   *
+   * @param packReader - packreader
+   * @param tasks - copy file tasks
+   */
+  static build(packReader: PackReader, tasks: Array<CopyTask>): any;
+
+  /**
+   * Start build task.
+   *
    * @param projects - project paths
    * @param tasks - copy file tasks
    */
-  public static build(projects: Array<string>, tasks: Array<CopyTask>) {
-    const configuration = vscode.workspace.getConfiguration('node-workspace-builder');
-    new Promise((resolve, reject) => {
-      if (Builder.building) {
-        return reject(new Error('You currently have a build task running. Please wait until finished.'));
+  static build(projects: Array<string>, tasks: Array<CopyTask>): any;
+
+  /**
+   * Start build task.
+   */
+  public static build(): any {
+    const build = (projects: Array<string>, tasks: Array<CopyTask>) => {
+      const configuration = vscode.workspace.getConfiguration('node-workspace-builder');
+      new Promise((resolve, reject) => {
+        if (Builder.building) {
+          return reject(new Error('You currently have a build task running. Please wait until finished.'));
+        }
+        Builder.output.clear();
+        Builder.building = true;
+        return resolve();
+      }).then(() => {
+        return configuration.get('npmInstallationSelect') === 'integrated' ?
+          Builder.npmBuild(projects, tasks) : Builder.terminalBuild(projects, tasks);
+      }).catch(err => {
+        console.error(err);
+        Builder.output.appendLine(err);
+        vscode.window.showErrorMessage(err.message);
+      }).finally(() => {
+        Builder.building = false;
+      });
+    };
+    if (arguments.length === 1 && arguments[0] instanceof PackReader) {
+      build(arguments[0].projects, arguments[0].tasks);
+    } else if (arguments.length === 2) {
+      if (arguments[0] instanceof Array) {
+        build(arguments[0], arguments[1]);
+      } else if (arguments[0] instanceof PackReader) {
+        build(arguments[0].projects, arguments[1]);
       }
-      Builder.building = true;
-      return resolve();
-    }).then(() => {
-      return configuration.get('npmInstallationSelect') === 'integrated' ?
-        Builder.npmBuild(projects, tasks) : Builder.terminalBuild(projects, tasks);
-    }).catch(err => {
-      console.error(err);
-      Builder.output.appendLine(err);
-      vscode.window.showErrorMessage(err.message);
-    }).finally(() => {
-      Builder.building = false;
-    });
+    }
   }
 }
