@@ -2,7 +2,7 @@
 
 All notable changes to the "Node Workspace Builder" extension will be documented in this file.
 
-## 0.1.5
+## 0.1.6
 - `Added` Multi-root workspace is supported now.
 
 ## 0.1.5
