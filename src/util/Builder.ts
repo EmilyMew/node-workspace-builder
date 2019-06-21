@@ -11,8 +11,8 @@ import FsHelper from './FsHelper';
 import TerminalHelper from './TerminalHelper';
 import PathConstants from '../constant/PathConstants';
 import CopyTask from '../model/CopyTask';
+import BuildTask from '../model/BuildTask';
 import PackReader from './PackReader';
-
 
 /**
  * builder.
@@ -25,6 +25,8 @@ export default class Builder {
   private static building: boolean = false;
 
   private static output: vscode.OutputChannel;
+
+  private static queue: Array<BuildTask> = [];
 
   static setOutput(output: vscode.OutputChannel): void {
     Builder.output = output;
@@ -122,14 +124,14 @@ export default class Builder {
         progress.report({ message: 'Installing project dependencies...' });
         const promises = projects.map(projectPath => {
           return new Promise((resolve, reject) => {
-            if (!FsHelper.isDirectory(`${projectPath}${PathConstants.NODE_MODULES}`)) {
+            if (FsHelper.isDirectory(`${projectPath}${PathConstants.NODE_MODULES}`)) {
+              resolve();
+            } else {
               needInstallAll = true;
               Builder.output.appendLine(`Start installing: ${projectPath}`);
               npm.commands.explore([projectPath, 'npm install'], (err, data) => {
                 err ? reject(new Error('Install failed: ' + projectPath)) : resolve();
               });
-            } else {
-              resolve();
             }
           });
         });
@@ -257,24 +259,33 @@ export default class Builder {
    * Start build task.
    */
   public static build(): any {
+    const buildAll = (queue: Array<BuildTask>, index = 0) => {
+      if (index < queue.length) {
+        const configuration = vscode.workspace.getConfiguration('node-workspace-builder');
+        const task = queue[index];
+        const buildFunction = configuration.get('npmInstallationSelect') === 'integrated' ? Builder.npmBuild : Builder.terminalBuild;
+        buildFunction(task.projects, task.tasks).then(() => {
+          buildAll(queue, index + 1);
+        });
+      } else {
+        Builder.queue = [];
+        Builder.building = false;
+      }
+    };
     const build = (projects: Array<string>, tasks: Array<CopyTask>) => {
-      const configuration = vscode.workspace.getConfiguration('node-workspace-builder');
       new Promise((resolve, reject) => {
+        Builder.queue.push(new BuildTask(projects, tasks));
         if (Builder.building) {
           return reject(new Error('You currently have a build task running. Please wait until finished.'));
         }
         Builder.output.clear();
+        Builder.output.show();
         Builder.building = true;
         return resolve();
       }).then(() => {
-        return configuration.get('npmInstallationSelect') === 'integrated' ?
-          Builder.npmBuild(projects, tasks) : Builder.terminalBuild(projects, tasks);
+        buildAll(Builder.queue);
       }).catch(err => {
-        console.error(err);
         Builder.output.appendLine(err);
-        vscode.window.showErrorMessage(err.message);
-      }).finally(() => {
-        Builder.building = false;
       });
     };
     if (arguments.length === 1 && arguments[0] instanceof PackReader) {
