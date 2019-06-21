@@ -233,6 +233,28 @@ export default class Builder {
   }
 
   /**
+   * valid path is included
+   * 
+   * @param task 
+   */
+  private static validPath(path: string) {
+    const configuration = vscode.workspace.getConfiguration('node-workspace-builder');
+    let configuredIncluded: Array<string> = configuration.get('includedPatterns') || [];
+    const modulePath = path.charAt(path.length - 1) === sep ? path.substring(0, path.lastIndexOf(sep)) : path;
+    const moduleName = modulePath.substring(modulePath.lastIndexOf(sep) + 1);
+    return (configuredIncluded.length === 0 || configuredIncluded.some((p: string) => new RegExp(p).test(moduleName)));
+  }
+
+  /**
+   * valid task is included
+   * 
+   * @param task 
+   */
+  private static validTask(task: CopyTask) {
+    return Builder.validPath(task.projectDepPath) && Builder.validPath(task.modulePath);
+  }
+
+  /**
    * Start build task.
    *
    * @param packReader - packreader
@@ -274,7 +296,7 @@ export default class Builder {
     };
     const build = (projects: Array<string>, tasks: Array<CopyTask>) => {
       new Promise((resolve, reject) => {
-        Builder.queue.push(new BuildTask(projects, tasks));
+        Builder.queue.push(new BuildTask(projects.filter(Builder.validPath), tasks.filter(Builder.validTask)));
         if (Builder.building) {
           return reject(new Error('You currently have a build task running. Please wait until finished.'));
         }
