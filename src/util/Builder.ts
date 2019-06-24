@@ -13,6 +13,7 @@ import PathConstants from '../constant/PathConstants';
 import CopyTask from '../model/CopyTask';
 import BuildTask from '../model/BuildTask';
 import PackReader from './PackReader';
+import OutputManager from './OutputManager';
 
 /**
  * builder.
@@ -24,13 +25,7 @@ export default class Builder {
 
   private static building: boolean = false;
 
-  private static output: vscode.OutputChannel;
-
   private static queue: Array<BuildTask> = [];
-
-  static setOutput(output: vscode.OutputChannel): void {
-    Builder.output = output;
-  }
 
   /**
    * Build via terminal commands.
@@ -128,7 +123,7 @@ export default class Builder {
               resolve();
             } else {
               needInstallAll = true;
-              Builder.output.appendLine(`Start installing: ${projectPath}`);
+              OutputManager.log(`Start installing: ${projectPath}`);
               npm.commands.explore([projectPath, 'npm install'], (err, data) => {
                 err ? reject(new Error('Install failed: ' + projectPath)) : resolve();
               });
@@ -154,7 +149,7 @@ export default class Builder {
           const buildModules = modules.map((modulePath: string) => {
             progress.report({ message: 'Building modules...' });
             return new Promise((resolve, reject) => {
-              Builder.output.appendLine(`Start building: ${modulePath}`);
+              OutputManager.log(`Start building: ${modulePath}`);
               npm.commands.explore([modulePath, 'npm run build'], (err, data) => {
                 if (err) {
                   return reject(new Error(`Error building module: ${modulePath}, error: ${err}`));
@@ -175,7 +170,7 @@ export default class Builder {
         progress.report({ message: 'Building projects...' });
         const promises = tasks.map((task: CopyTask) => {
           return new Promise((resolve, reject) => {
-            Builder.output.appendLine(`Start building: ${task.modulePath} -> ${task.projectDepPath}`);
+            OutputManager.log(`Start building: ${task.modulePath} -> ${task.projectDepPath}`);
             const buildToProject = () => {
               const promises = task.files.map(file => {
                 return new Promise((res, rej) => {
@@ -196,7 +191,7 @@ export default class Builder {
                   FsHelper.copy(srcPath, targetPath).then(() => {
                     res();
                   }).catch((err: any) => {
-                    Builder.output.appendLine(err);
+                    OutputManager.log(err);
                     rej(err);
                   });
                 });
@@ -205,7 +200,7 @@ export default class Builder {
             };
             setTimeout(() => {
               buildToProject().then(() => {
-                Builder.output.appendLine(`Build succeed: ${task.modulePath}`);
+                OutputManager.log(`Build succeed: ${task.modulePath}`);
                 resolve();
               }).catch(reject);
             }, 3000);
@@ -226,7 +221,7 @@ export default class Builder {
           return Promise.all(removePromises);
         });
       }).catch(err => {
-        Builder.output.appendLine(err);
+        OutputManager.log(err);
         Promise.reject(err);
       });
     });
@@ -300,14 +295,13 @@ export default class Builder {
         if (Builder.building) {
           return reject(new Error('You currently have a build task running. Please wait until finished.'));
         }
-        Builder.output.clear();
-        Builder.output.show();
+        OutputManager.show();
         Builder.building = true;
         return resolve();
       }).then(() => {
         buildAll(Builder.queue);
       }).catch(err => {
-        Builder.output.appendLine(err);
+        OutputManager.log(err);
       });
     };
     if (arguments.length === 1 && arguments[0] instanceof PackReader) {

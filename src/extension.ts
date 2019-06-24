@@ -14,26 +14,32 @@ import PathConstants from './constant/PathConstants';
 import CopyTask from './model/CopyTask';
 import Builder from './util/Builder';
 import FsHelper from './util/FsHelper';
+import OutputManager from './util/OutPutManager';
+
+let placeholder = PathConstants.PLACEHOLDER;
 
 const packReader = new PackReader();
 
-const output = vscode.window.createOutputChannel('Node Workspace Builder');
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
 	const folders = vscode.workspace.workspaceFolders === undefined ? [] : vscode.workspace.workspaceFolders.map(folder => folder.uri.fsPath);
-	packReader.prepare(folders);
 
 	// Use the console to output diagnostic information (console.log) and errors (console.error)
 	// This line of code will only be executed once when your extension is activated
 	console.log('Congratulations, your extension "node-workspace-builder" is now active!');
-	FsHelper.setOutput(output);
-	Builder.setOutput(output);
+
+	vscode.workspace.findFiles(`**/${PathConstants.PLACEHOLDER_OLD}`).then(value => {
+		placeholder = value.length > 0 ? PathConstants.PLACEHOLDER_OLD : PathConstants.PLACEHOLDER;
+	}).then(() => {
+		packReader.prepare(folders, placeholder);
+	});
 
 	let build = vscode.commands.registerCommand('node-workspace-builder.buildWorkspace', () => {
 		Builder.build(packReader);
 	});
+
 
 	let watch = vscode.commands.registerCommand('node-workspace-builder.watchProject', (uri: vscode.Uri) => {
 		new Promise<Array<vscode.Uri>>((resolve, reject) => {
@@ -51,19 +57,19 @@ export function activate(context: vscode.ExtensionContext) {
 			const promises = realUris.filter(f => {
 				const isNodeModules = pattern.test(f.fsPath);
 				if (isNodeModules) {
-					output.appendLine('This is a dependency installation folder. Workspace builder will not watch this: ' + f.fsPath);
+					OutputManager.log('This is a dependency installation folder. Workspace builder will not watch this: ' + f.fsPath);
 				}
 				const isPackJson = f.fsPath.includes(PathConstants.PACK_JSON);
 				const includesPackJson = FsHelper.exists(`${f.fsPath}${sep}${PathConstants.PACK_JSON}`);
 				if (!isPackJson && !includesPackJson) {
-					output.appendLine('There is no package.json file found. This folder is not a node project folder: ' + f.fsPath);
+					OutputManager.log('There is no package.json file found. This folder is not a node project folder: ' + f.fsPath);
 				}
 				return !isNodeModules && (isPackJson || includesPackJson);
 			}).map(realUri => {
 				const isPackJson = realUri.fsPath.includes(PathConstants.PACK_JSON);
 				const file = isPackJson
-					? realUri.fsPath.replace(PathConstants.PACK_JSON, PathConstants.PLACEHOLDER)
-					: `${realUri.fsPath}${sep}${PathConstants.PLACEHOLDER}`;
+					? realUri.fsPath.replace(PathConstants.PACK_JSON, placeholder)
+					: `${realUri.fsPath}${sep}${placeholder}`;
 
 				FsHelper.writeFile(file, '');
 				return Promise.resolve();
@@ -95,20 +101,20 @@ export function activate(context: vscode.ExtensionContext) {
 				let result = true;
 				const isNodeModules = pattern.test(f.fsPath);
 				if (isNodeModules) {
-					output.appendLine('This is a dependency installation folder. Workspace builder will not watch this: ' + f.fsPath);
+					OutputManager.log('This is a dependency installation folder. Workspace builder will not watch this: ' + f.fsPath);
 					result = false;
 					return result;
 				}
 				const isPackJson = f.fsPath.includes(PathConstants.PACK_JSON);
 				const includesPackJson = FsHelper.exists(`${f.fsPath}${sep}${PathConstants.PACK_JSON}`);
 				if (!isPackJson && !includesPackJson) {
-					output.appendLine('There is no package.json file found. This folder is not a node project folder: ' + f.fsPath);
+					OutputManager.log('There is no package.json file found. This folder is not a node project folder: ' + f.fsPath);
 					result = false;
 					return result;
 				}
-				result = isPackJson ? FsHelper.exists(f.fsPath.replace(PathConstants.PACK_JSON, PathConstants.PLACEHOLDER)) : FsHelper.exists(`${f.fsPath}${sep}${PathConstants.PLACEHOLDER}`);
+				result = isPackJson ? FsHelper.exists(f.fsPath.replace(PathConstants.PACK_JSON, placeholder)) : FsHelper.exists(`${f.fsPath}${sep}${placeholder}`);
 				if (!result) {
-					output.appendLine('This is not a watched project: ' + f.fsPath);
+					OutputManager.log('This is not a watched project: ' + f.fsPath);
 				}
 				return result;
 			}).map(realUri => {

@@ -30,7 +30,7 @@ const getAllPackDeps = (pack: Pack, packMap: Map<string, Pack>, projectPack: Pac
 
 };
 
-const scan = async (root: string, matches: string, ignores: Array<string>): Promise<Array<string>> => {
+const scan = async (root: string, matches: string, ignores: Array<string> = []): Promise<Array<string>> => {
   let paths = new Array<string>();
   const files = FsHelper.readDir(root);
   files.forEach((file: any) => {
@@ -74,7 +74,7 @@ export default class PackReader {
    * 
    * @param roots vscode workspace root paths
    */
-  prepare(roots: Array<string>): Promise<unknown[]> {
+  prepare(roots: Array<string>, placeholder: string = PathConstants.PLACEHOLDER): Promise<unknown[]> {
     this.watchPaths = new Array<string>();
     this.projects = new Array<string>();
     const promises = roots.map(root => {
@@ -82,8 +82,8 @@ export default class PackReader {
         if (root === undefined || root === null) {
           resolve();
         } else {
-          scan(root, PathConstants.PLACEHOLDER, [PathConstants.NODE_MODULES, PathConstants.GIT]).then(placeholders => {
-            this.projects.splice(this.projects.length, 0, ...placeholders.map(filePath => filePath.replace(PathConstants.PLACEHOLDER, '')));
+          scan(root, placeholder, [PathConstants.NODE_MODULES, PathConstants.GIT]).then(placeholders => {
+            this.projects.splice(this.projects.length, 0, ...placeholders.map(filePath => filePath.replace(placeholder, '')));
             scan(root, PathConstants.PACK_JSON, [PathConstants.NODE_MODULES, PathConstants.GIT]).then(packFiles => {
               packFiles.forEach(filePath => {
                 let pack = require(filePath);
@@ -94,7 +94,7 @@ export default class PackReader {
                     dependencies.push(dep);
                   });
                 }
-                const watch = placeholders.includes(filePath.replace(PathConstants.PACK_JSON, PathConstants.PLACEHOLDER));
+                const watch = placeholders.includes(filePath.replace(PathConstants.PACK_JSON, placeholder));
                 if (watch) {
                   this.watchPaths.push(filePath);
                 }
