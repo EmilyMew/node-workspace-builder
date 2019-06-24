@@ -20,10 +20,6 @@ If you think this extension is useful and would like to buy me a juice:
   </a>
 </p>
 
-## Features
-
-To watch project dependencies, put a `.nodewebproject` file in the project folder together with the `package.json` file.
-
 ## Requirements
 
 Windows, MacOS, Linux are all supported for now. Needs VS Code 1.32 or newer.
