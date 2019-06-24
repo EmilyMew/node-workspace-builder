@@ -16,5 +16,5 @@ export default class PathConstants {
   public static PACK_JSON = 'package.json';
   public static PACK_LOCK_JSON = 'package-lock.json';
 
-  public static PLACEHOLDER = '\.nodedwswatcher';
+  public static PLACEHOLDER = '\.nodewebproject';
 }

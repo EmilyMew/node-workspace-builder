@@ -22,7 +22,7 @@ If you think this extension is useful and would like to buy me a juice:
 
 ## Features
 
-To watch project dependencies, put a `.nodedwswatcher` file in the project folder together with the `package.json` file.
+To watch project dependencies, put a `.nodewebproject` file in the project folder together with the `package.json` file.
 
 ## Requirements
 

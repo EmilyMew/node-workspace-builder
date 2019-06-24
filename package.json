@@ -16,7 +16,7 @@
     "Other"
   ],
   "activationEvents": [
-    "workspaceContains:**/.nodedwswatcher",
+    "workspaceContains:**/.nodewebproject",
     "onCommand:node-workspace-builder.buildWorkspace",
     "onCommand:node-workspace-builder.watchProject",
     "onCommand:node-workspace-builder.buildProject"

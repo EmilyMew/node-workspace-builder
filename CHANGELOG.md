@@ -2,6 +2,10 @@
 
 All notable changes to the "Node Workspace Builder" extension will be documented in this file.
 
+## 0.1.8
+- `Added` Added settings `node-workspace-builder.includedPatterns` that specified modules to build using regExp patterns. If leave it as an empty array, this extension will build all modules in workspace.
+- `Changed` Modified  file name of project placeholder.
+
 ## 0.1.7
 - `Added` Multi-task mode is supported now. When start a new build task while another build task is running, just push the new task to task queue.
 
