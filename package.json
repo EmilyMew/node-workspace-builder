@@ -2,7 +2,7 @@
   "name": "node-workspace-builder",
   "displayName": "Node Workspace Builder",
   "description": "This extension helps you to sync your source code to projects' dependencies folders which depends on it automatically. ",
-  "version": "0.1.9",
+  "version": "0.1.10",
   "author": "EmilyWang",
   "publisher": "EmilyWang",
   "repository": {
@@ -53,12 +53,12 @@
           ],
           "description": "Specify which npm installation to build with. The option `external` means using npm installation pre-installed on your PC, the option `integrated` means using npm integrated in this extension."
         },
-        "includedPatterns": {
+        "node-workspace-builder.includedPatterns": {
           "type": "array",
           "default": [],
           "description": "Specify modules to build using regExp patterns. If leave it as an empty array, this extension will build all modules in workspace."
         },
-        "showOutput": {
+        "node-workspace-builder.showOutput": {
           "type": "boolean",
           "default": false,
           "description": "Specify if show logs in output pannel."

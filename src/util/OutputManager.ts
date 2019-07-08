@@ -21,7 +21,9 @@ export default class OutputManager {
    */
   public static init(): void {
     const configuration = vscode.workspace.getConfiguration('node-workspace-builder');
-    OutputManager.enabled = configuration.get("showOutput") === null || false;
+    const value = configuration.get("showOutput");
+    OutputManager.enabled = configuration.get("showOutput") === null || configuration.get("showOutput") === undefined
+      ? false : (value instanceof Boolean ? value : JSON.parse(String(value)));
     if (OutputManager.enabled && OutputManager.output === undefined) {
       OutputManager.output = vscode.window.createOutputChannel('Node Workspace Builder');
     }
@@ -43,6 +45,7 @@ export default class OutputManager {
    * @param value string to log
    */
   public static log(value: string): void {
+    console.log(value);
     OutputManager.enabled && OutputManager.output.appendLine(value);
   }
 }

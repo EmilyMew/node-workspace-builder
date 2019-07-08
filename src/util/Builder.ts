@@ -188,7 +188,9 @@ export default class Builder {
                     }, 500);
                     return;
                   }
-                  FsHelper.copy(srcPath, targetPath).then(() => {
+                  FsHelper.rm(targetPath).then(() => {
+                    return FsHelper.copy(srcPath, targetPath);
+                  }).then(() => {
                     res();
                   }).catch((err: any) => {
                     OutputManager.log(err);
@@ -302,6 +304,7 @@ export default class Builder {
         buildAll(Builder.queue);
       }).catch(err => {
         OutputManager.log(err);
+        Builder.building = false;
       });
     };
     if (arguments.length === 1 && arguments[0] instanceof PackReader) {

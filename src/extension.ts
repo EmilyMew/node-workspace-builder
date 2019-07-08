@@ -29,17 +29,22 @@ export function activate(context: vscode.ExtensionContext) {
 	// Use the console to output diagnostic information (console.log) and errors (console.error)
 	// This line of code will only be executed once when your extension is activated
 	console.log('Congratulations, your extension "node-workspace-builder" is now active!');
+	OutputManager.init();
 
 	vscode.workspace.findFiles(`**/${PathConstants.PLACEHOLDER_OLD}`).then(value => {
 		placeholder = value.length > 0 ? PathConstants.PLACEHOLDER_OLD : PathConstants.PLACEHOLDER;
 	}).then(() => {
-		packReader.prepare(folders, placeholder);
-	});
-
-	let build = vscode.commands.registerCommand('node-workspace-builder.buildWorkspace', () => {
+		return packReader.prepare(folders, placeholder);
+	}).then(() => {
+		console.log('Initial build at start up.');
 		Builder.build(packReader);
 	});
 
+	let build = vscode.commands.registerCommand('node-workspace-builder.buildWorkspace', () => {
+		packReader.prepare(folders, placeholder).then(() => {
+			Builder.build(packReader);
+		});
+	});
 
 	let watch = vscode.commands.registerCommand('node-workspace-builder.watchProject', (uri: vscode.Uri) => {
 		new Promise<Array<vscode.Uri>>((resolve, reject) => {
@@ -138,39 +143,67 @@ export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(watch);
 	context.subscriptions.push(buildProject);
 
-	vscode.workspace.onDidSaveTextDocument((e: vscode.TextDocument) => {
+	const fileEventHandler = (fileName: string) => {
 		const configuration = vscode.workspace.getConfiguration('node-workspace-builder');
 		const tasks = new Array<CopyTask>();
 		if (configuration.get('autoBuildOnSave')) {
 			let needRebuild = false;
 			let needReprepare = false;
-			const changedFilePath = e.fileName;
 			for (let i = 0; i < packReader.watchPaths.length; i++) {
 				let watchPath = packReader.watchPaths[i];
-				needReprepare = changedFilePath.indexOf(PathConstants.PACK_JSON) >= 0;
+				needReprepare = fileName.indexOf(PathConstants.PACK_JSON) >= 0;
 				if (needReprepare) {
 					needRebuild = true;
 					break;
 				} else {
-					needRebuild = changedFilePath.indexOf(watchPath) >= 0;
+					needRebuild = fileName.indexOf(watchPath) >= 0;
 					if (needRebuild) {
-						tasks.splice(0, tasks.length, ...packReader.tasks.filter(f => changedFilePath.indexOf(f.modulePath) >= 0));
+						tasks.splice(0, tasks.length, ...packReader.tasks.filter(f => fileName.indexOf(f.modulePath) >= 0));
 						break;
 					}
 				}
 			}
 			if (needRebuild) {
-				needReprepare ? packReader.prepare(folders).then(() => {
+				needReprepare ? packReader.prepare(folders, placeholder).then(() => {
 					Builder.build(packReader);
 				}) : Builder.build(packReader, tasks);
 			}
 		}
+	};
+
+	const fileSystemWatcher = vscode.workspace.createFileSystemWatcher('');
+
+	fileSystemWatcher.onDidChange(e => {
+		fileEventHandler(e.fsPath);
 	});
+	fileSystemWatcher.onDidCreate(e => {
+		fileEventHandler(e.fsPath);
+	});
+	fileSystemWatcher.onDidDelete(e => {
+		fileEventHandler(e.fsPath);
+	});
+
+	vscode.workspace.onDidSaveTextDocument((e: vscode.TextDocument) => {
+		fileEventHandler(e.fileName);
+	});
+
 	vscode.workspace.onDidChangeWorkspaceFolders(() => {
 		const changedFolders = vscode.workspace.workspaceFolders === undefined ? [] : vscode.workspace.workspaceFolders.map(folder => folder.uri.fsPath);
 		const configuration = vscode.workspace.getConfiguration('node-workspace-builder');
 		if (configuration.get('autoBuildOnFoldersChanged')) {
-			packReader.prepare(changedFolders).then(() => {
+			packReader.prepare(changedFolders, placeholder).then(() => {
+				Builder.build(packReader);
+			});
+		}
+	});
+
+	vscode.workspace.onDidChangeConfiguration((e) => {
+		if (e.affectsConfiguration('node-workspace-builder.showOutput')) {
+			OutputManager.init();
+		}
+		if (e.affectsConfiguration('node-workspace-builder.includedPatterns')) {
+			const folders = vscode.workspace.workspaceFolders === undefined ? [] : vscode.workspace.workspaceFolders.map(folder => folder.uri.fsPath);
+			packReader.prepare(folders, placeholder).then(() => {
 				Builder.build(packReader);
 			});
 		}

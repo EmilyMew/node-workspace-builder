@@ -3,6 +3,10 @@
 All notable changes to the "Node Workspace Builder" extension will be documented in this file.
 
 ## 0.1.9
+- `Changed` Run a initial build at start up.
+- `Fixed` Configuration error.
+
+## 0.1.9
 - `Changed` Logging on output pannel is disabled by default. If you need it, change the settings.
 
 ## 0.1.8
