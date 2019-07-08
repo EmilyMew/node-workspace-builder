@@ -2,7 +2,7 @@
 
 All notable changes to the "Node Workspace Builder" extension will be documented in this file.
 
-## 0.1.9
+## 0.1.10
 - `Changed` Run a initial build at start up.
 - `Fixed` Configuration error.
 
