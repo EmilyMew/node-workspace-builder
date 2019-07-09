@@ -188,9 +188,7 @@ export default class Builder {
                     }, 500);
                     return;
                   }
-                  FsHelper.rm(targetPath).then(() => {
-                    return FsHelper.copy(srcPath, targetPath);
-                  }).then(() => {
+                  FsHelper.replace(srcPath, targetPath).then(() => {
                     res();
                   }).catch((err: any) => {
                     OutputManager.log(err);

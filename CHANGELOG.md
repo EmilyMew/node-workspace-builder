@@ -2,6 +2,9 @@
 
 All notable changes to the "Node Workspace Builder" extension will be documented in this file.
 
+## 0.1.11
+- `Fixed` Webpack dev server ran into an exception cause of building while project is running.
+
 ## 0.1.10
 - `Changed` Run a initial build at start up.
 - `Fixed` Configuration error.

@@ -185,4 +185,57 @@ export default class FsHelper {
       OutputManager.log(err);
     });
   }
+
+  /**
+   * copy a file or a directory. recursively if is directory.
+   * 
+   * @param src path of source file to copy
+   * @param dst copy desitination path
+   */
+  static replace(src: string, dst: string) {
+    return new Promise<Array<string> | undefined>((resolve, reject) => {
+      fs.stat(src, (err, stats) => {
+        if (err) {
+          return reject(err);
+        }
+        if (stats.isFile()) {
+          OutputManager.log(`Copy file: ${src} -> ${dst}`);
+          let readable = fs.createReadStream(src);
+          let writable = fs.createWriteStream(dst);
+          readable.pipe(writable);
+          return resolve();
+        } else if (stats.isDirectory()) {
+          const srcPaths = fs.readdirSync(src);
+          if (fs.existsSync(dst)) {
+            const promises = fs.readdirSync(dst).filter(_dst => !fs.existsSync(src + _dst)).map(_dst => FsHelper.rm(src + _dst));
+            Promise.all(promises).then(() => {
+              resolve(srcPaths);
+            }).catch(err => {
+              reject(err);
+            });
+          } else {
+            fs.mkdir(dst, err => {
+              err ? reject(err) : resolve(srcPaths);
+            });
+          }
+        }
+      });
+    }).then((paths: Array<string> | undefined) => {
+      if (paths !== undefined && paths !== null) {
+        const promises = paths.map(p => {
+          const _src = src + path.sep + p;
+          const _dst = dst + path.sep + p;
+          return new Promise((resolve, reject) => {
+            FsHelper.copy(_src, _dst).then(() => {
+              resolve();
+            }).catch(reject);
+          });
+        });
+        return Promise.all(promises);
+      }
+      return Promise.resolve([]);
+    }).catch((err: any) => {
+      OutputManager.log(err);
+    });
+  }
 }
