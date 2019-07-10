@@ -12,40 +12,46 @@ import * as vscode from 'vscode';
  */
 export default class OutputManager {
 
-  private static output: vscode.OutputChannel;
-
-  private static enabled: boolean;
+  private output: vscode.OutputChannel;
 
   /**
-   * init output.
+   * init output
+   * 
+   * @param output 
    */
-  public static init(): void {
+  constructor(output: vscode.OutputChannel) {
+    this.output = output;
+  }
+
+  /**
+   * is output enabled
+   */
+  public enabled(): boolean {
     const configuration = vscode.workspace.getConfiguration('node-workspace-builder');
-    const value = configuration.get("showOutput");
-    OutputManager.enabled = configuration.get("showOutput") === null || configuration.get("showOutput") === undefined
+    const value = configuration.get('showOutput');
+    return configuration.get('showOutput') === null || configuration.get('showOutput') === undefined
       ? false : (value instanceof Boolean ? value : JSON.parse(String(value)));
-    if (OutputManager.enabled && OutputManager.output === undefined) {
-      OutputManager.output = vscode.window.createOutputChannel('Node Workspace Builder');
-    }
   }
 
   /**
    * show output
    */
-  public static show(): void {
-    if (OutputManager.enabled) {
-      OutputManager.output.clear();
-      OutputManager.output.show();
+  public show(): void {
+    if (this.enabled()) {
+      this.output.clear();
+      this.output.show();
     }
   }
 
   /**
    * append line to output
-   * 
+   *
    * @param value string to log
    */
-  public static log(value: string): void {
+  public log(value: string): void {
     console.log(value);
-    OutputManager.enabled && OutputManager.output.appendLine(value);
+    if (this.enabled()) {
+      this.output.appendLine(value);
+    }
   }
 }

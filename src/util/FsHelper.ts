@@ -16,6 +16,17 @@ import OutputManager from './OutPutManager';
  */
 export default class FsHelper {
 
+  private static output: OutputManager;
+
+  /**
+   * Initialize
+   * 
+   * @param output 
+   */
+  static init(output: OutputManager) {
+    FsHelper.output = output;
+  }
+
   /**
    * returns a file or directory is exists.
    * 
@@ -104,7 +115,7 @@ export default class FsHelper {
     return new Promise<Array<string> | undefined>((resolve, reject) => {
       const stats = fs.statSync(src);
       if (stats.isFile() || stats.isSymbolicLink()) {
-        OutputManager.log(`Delete file: ${src}`);
+        FsHelper.output.log(`Delete file: ${src}`);
         fs.unlink(src, err => {
           err ? reject(err) : resolve();
         });
@@ -134,7 +145,7 @@ export default class FsHelper {
         return Promise.resolve({});
       }
     }).catch((err: any) => {
-      OutputManager.log(err);
+      FsHelper.output.log(err);
     });
   }
 
@@ -151,7 +162,7 @@ export default class FsHelper {
           return reject(err);
         }
         if (stats.isFile()) {
-          OutputManager.log(`Copy file: ${src} -> ${dst}`);
+          FsHelper.output.log(`Copy file: ${src} -> ${dst}`);
           let readable = fs.createReadStream(src);
           let writable = fs.createWriteStream(dst);
           readable.pipe(writable);
@@ -182,7 +193,7 @@ export default class FsHelper {
       }
       return Promise.resolve([]);
     }).catch((err: any) => {
-      OutputManager.log(err);
+      FsHelper.output.log(err);
     });
   }
 
@@ -199,7 +210,7 @@ export default class FsHelper {
           return reject(err);
         }
         if (stats.isFile()) {
-          OutputManager.log(`Copy file: ${src} -> ${dst}`);
+          FsHelper.output.log(`Copy file: ${src} -> ${dst}`);
           let readable = fs.createReadStream(src);
           let writable = fs.createWriteStream(dst);
           readable.pipe(writable);
@@ -235,7 +246,7 @@ export default class FsHelper {
       }
       return Promise.resolve([]);
     }).catch((err: any) => {
-      OutputManager.log(err);
+      FsHelper.output.log(err);
     });
   }
 }

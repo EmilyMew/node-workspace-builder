@@ -2,6 +2,11 @@
 
 All notable changes to the "Node Workspace Builder" extension will be documented in this file.
 
+## 0.1.12
+- `Added` Added `clean workspace` command. You can clean all `node_module` directories of your watched web projects with this command.
+- `Added` Added `clean project` command. You can clean `node_module` directory of specified watched web project with this command.
+- `Removed` Removed configuration `npmInstallationSelect`. Building with npm is stable now, removed methods to build with terminal commands.
+
 ## 0.1.11
 - `Fixed` Webpack dev server ran into an exception cause of building while project is running.
 

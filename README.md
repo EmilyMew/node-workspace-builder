@@ -38,7 +38,6 @@ This extension contributes the following settings:
 | `node-workspace-builder.autoBuildOnSave`            | Specify if build the whole workspace on saving text documents.                                        |
 | `node-workspace-builder.autoBuildOnFoldersChanged`  | Specify if build the whole workspace on workspace folders changed.                                    |
 | `node-workspace-builder.buildModulesWithoutInstall` | For whose modules does not need install dependencies before building, specifying this to `true`, you can run build scripts directly.|
-| `node-workspace-builder.npmInstallationSelect`      | Specify whitch npm installation to build with. The option `external` means using npm installation pre-installed on your PC, the option `integrated` means using npm integrated in this extension.|
 | `node-workspace-builder.includedPatterns`           | Specify modules to build using regExp patterns. If leave it as an empty array, this extension will build all modules in workspace.|
 | `node-workspace-builder.showOutput`                 | Specify if show logs in output pannel.                                                                |
 
@@ -49,5 +48,7 @@ This extension contributes the following keyboard shortcuts:
 | Settings                | Description                                                                                           |
 |-------------------------|-------------------------------------------------------------------------------------------------------|
 | `Ctrl` + `Alt` + `B`    | Build all project in the whole workspace.                                                             |
+| `Ctrl` + `Alt` + `C`    | Clean all project in the whole workspace.                                                             |
 | `Shift` + `Alt` + `W`   | Watch selected projects.                                                                              |
 | `Shift` + `Alt` + `B`   | Build selected projects (you must watch them first or projects not watched will not be built).        |
+| `Shift` + `Alt` + `C`   | Clean selected projects (you must watch them first or projects not watched will not be built).        |

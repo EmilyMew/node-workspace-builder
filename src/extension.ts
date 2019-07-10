@@ -12,13 +12,18 @@ import * as clipboard from 'copy-paste';
 import PackReader from './util/PackReader';
 import PathConstants from './constant/PathConstants';
 import CopyTask from './model/CopyTask';
+import OutputManager from './util/OutPutManager';
 import Builder from './util/Builder';
 import FsHelper from './util/FsHelper';
-import OutputManager from './util/OutPutManager';
 
 let placeholder = PathConstants.PLACEHOLDER;
 
 const packReader = new PackReader();
+
+const output = vscode.window.createOutputChannel('Node Workspace Builder');
+const outputMgr = new OutputManager(output);
+Builder.init(outputMgr);
+FsHelper.init(outputMgr);
 
 
 // this method is called when your extension is activated
@@ -29,7 +34,6 @@ export function activate(context: vscode.ExtensionContext) {
 	// Use the console to output diagnostic information (console.log) and errors (console.error)
 	// This line of code will only be executed once when your extension is activated
 	console.log('Congratulations, your extension "node-workspace-builder" is now active!');
-	OutputManager.init();
 
 	vscode.workspace.findFiles(`**/${PathConstants.PLACEHOLDER_OLD}`).then(value => {
 		placeholder = value.length > 0 ? PathConstants.PLACEHOLDER_OLD : PathConstants.PLACEHOLDER;
@@ -40,13 +44,27 @@ export function activate(context: vscode.ExtensionContext) {
 		Builder.build(packReader);
 	});
 
-	let build = vscode.commands.registerCommand('node-workspace-builder.buildWorkspace', () => {
+	const build = vscode.commands.registerCommand('node-workspace-builder.buildWorkspace', () => {
 		packReader.prepare(folders, placeholder).then(() => {
 			Builder.build(packReader);
 		});
 	});
 
-	let watch = vscode.commands.registerCommand('node-workspace-builder.watchProject', (uri: vscode.Uri) => {
+	const clean = vscode.commands.registerCommand('node-workspace-builder.cleanWorkspace', () => {
+		vscode.window.withProgress({
+			location: vscode.ProgressLocation.Notification,
+			title: 'Cleaning workspace',
+			cancellable: false
+		}, (progress, token) => {
+			return Promise.all(packReader.projects.map(projectPath => {
+				progress.report({ message: 'Cleaning project dependencies...' });
+				return Promise.all([FsHelper.rm(`${projectPath}${PathConstants.NODE_MODULES}`),
+				FsHelper.rm(`${projectPath}${PathConstants.PACK_LOCK_JSON}`)]);
+			}));
+		});
+	});
+
+	const watch = vscode.commands.registerCommand('node-workspace-builder.watchProject', (uri: vscode.Uri) => {
 		new Promise<Array<vscode.Uri>>((resolve, reject) => {
 			if (uri === undefined) {
 				vscode.commands.executeCommand('copyFilePath').then(value => {
@@ -62,12 +80,12 @@ export function activate(context: vscode.ExtensionContext) {
 			const promises = realUris.filter(f => {
 				const isNodeModules = pattern.test(f.fsPath);
 				if (isNodeModules) {
-					OutputManager.log('This is a dependency installation folder. Workspace builder will not watch this: ' + f.fsPath);
+					outputMgr.log('This is a dependency installation folder. Workspace builder will not watch this: ' + f.fsPath);
 				}
 				const isPackJson = f.fsPath.includes(PathConstants.PACK_JSON);
 				const includesPackJson = FsHelper.exists(`${f.fsPath}${sep}${PathConstants.PACK_JSON}`);
 				if (!isPackJson && !includesPackJson) {
-					OutputManager.log('There is no package.json file found. This folder is not a node project folder: ' + f.fsPath);
+					outputMgr.log('There is no package.json file found. This folder is not a node project folder: ' + f.fsPath);
 				}
 				return !isNodeModules && (isPackJson || includesPackJson);
 			}).map(realUri => {
@@ -89,8 +107,8 @@ export function activate(context: vscode.ExtensionContext) {
 		});
 	});
 
-	let buildProject = vscode.commands.registerCommand('node-workspace-builder.buildProject', (uri) => {
-		new Promise<Array<vscode.Uri>>((resolve, reject) => {
+	const getWatchedProjects = (uri: vscode.Uri | undefined) => {
+		return new Promise<Array<vscode.Uri>>((resolve, reject) => {
 			if (uri === undefined) {
 				vscode.commands.executeCommand('copyFilePath').then(value => {
 					const paths = clipboard.paste().split('\n');
@@ -106,20 +124,20 @@ export function activate(context: vscode.ExtensionContext) {
 				let result = true;
 				const isNodeModules = pattern.test(f.fsPath);
 				if (isNodeModules) {
-					OutputManager.log('This is a dependency installation folder. Workspace builder will not watch this: ' + f.fsPath);
+					outputMgr.log('This is a dependency installation folder. Workspace builder will not build this: ' + f.fsPath);
 					result = false;
 					return result;
 				}
 				const isPackJson = f.fsPath.includes(PathConstants.PACK_JSON);
 				const includesPackJson = FsHelper.exists(`${f.fsPath}${sep}${PathConstants.PACK_JSON}`);
 				if (!isPackJson && !includesPackJson) {
-					OutputManager.log('There is no package.json file found. This folder is not a node project folder: ' + f.fsPath);
+					outputMgr.log('There is no package.json file found. This folder is not a node project folder: ' + f.fsPath);
 					result = false;
 					return result;
 				}
 				result = isPackJson ? FsHelper.exists(f.fsPath.replace(PathConstants.PACK_JSON, placeholder)) : FsHelper.exists(`${f.fsPath}${sep}${placeholder}`);
 				if (!result) {
-					OutputManager.log('This is not a watched project: ' + f.fsPath);
+					outputMgr.log('This is not a watched project: ' + f.fsPath);
 				}
 				return result;
 			}).map(realUri => {
@@ -128,7 +146,11 @@ export function activate(context: vscode.ExtensionContext) {
 				return Promise.resolve(file);
 			});
 			return Promise.all(promises);
-		}).then((files: Array<string>) => {
+		});
+	};
+
+	const buildProject = vscode.commands.registerCommand('node-workspace-builder.buildProject', (uri) => {
+		getWatchedProjects(uri).then((files: Array<string>) => {
 			const tasks = new Array<CopyTask>();
 			files.forEach(file => {
 				tasks.splice(tasks.length, 0, ...packReader.tasks.filter(f => f.projectDepPath.includes(file)));
@@ -139,14 +161,38 @@ export function activate(context: vscode.ExtensionContext) {
 		});
 	});
 
+	const cleanProject = vscode.commands.registerCommand('node-workspace-builder.cleanProject', (uri) => {
+		getWatchedProjects(uri).then((files: Array<string>) => {
+			vscode.window.withProgress({
+				location: vscode.ProgressLocation.Notification,
+				title: 'Cleaning project',
+				cancellable: false
+			}, (progress, token) => {
+				return Promise.all(files.map(projectPath => {
+					progress.report({ message: 'Cleaning project dependencies...' });
+					return Promise.all([FsHelper.rm(`${projectPath}${PathConstants.NODE_MODULES}`),
+					FsHelper.rm(`${projectPath}${PathConstants.PACK_LOCK_JSON}`)]);
+				}));
+			});
+		}).catch(err => {
+			vscode.window.showErrorMessage(err.message);
+		});
+	});
+
 	context.subscriptions.push(build);
+	context.subscriptions.push(clean);
 	context.subscriptions.push(watch);
 	context.subscriptions.push(buildProject);
+	context.subscriptions.push(cleanProject);
 
 	const fileEventHandler = (fileName: string) => {
 		const configuration = vscode.workspace.getConfiguration('node-workspace-builder');
 		const tasks = new Array<CopyTask>();
-		if (configuration.get('autoBuildOnSave')) {
+		const ignored = fileName.indexOf(PathConstants.PACK_LOCK_JSON) >= 0
+			|| fileName.indexOf(PathConstants.NODE_MODULES) >= 0
+			|| fileName.indexOf(PathConstants.PLACEHOLDER) >= 0
+			|| fileName.indexOf(PathConstants.PLACEHOLDER_OLD) >= 0;
+		if (configuration.get('autoBuildOnSave') && !ignored) {
 			let needRebuild = false;
 			let needReprepare = false;
 			for (let i = 0; i < packReader.watchPaths.length; i++) {
@@ -198,9 +244,6 @@ export function activate(context: vscode.ExtensionContext) {
 	});
 
 	vscode.workspace.onDidChangeConfiguration((e) => {
-		if (e.affectsConfiguration('node-workspace-builder.showOutput')) {
-			OutputManager.init();
-		}
 		if (e.affectsConfiguration('node-workspace-builder.includedPatterns')) {
 			const folders = vscode.workspace.workspaceFolders === undefined ? [] : vscode.workspace.workspaceFolders.map(folder => folder.uri.fsPath);
 			packReader.prepare(folders, placeholder).then(() => {

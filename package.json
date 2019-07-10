@@ -2,7 +2,7 @@
   "name": "node-workspace-builder",
   "displayName": "Node Workspace Builder",
   "description": "This extension helps you to sync your source code to projects' dependencies folders which depends on it automatically. ",
-  "version": "0.1.11",
+  "version": "0.1.12",
   "author": "EmilyWang",
   "publisher": "EmilyWang",
   "repository": {
@@ -19,8 +19,10 @@
     "workspaceContains:**/.nodewebproject",
     "workspaceContains:**/.nodedwswatcher",
     "onCommand:node-workspace-builder.buildWorkspace",
+    "onCommand:node-workspace-builder.cleanWorkspace",
     "onCommand:node-workspace-builder.watchProject",
-    "onCommand:node-workspace-builder.buildProject"
+    "onCommand:node-workspace-builder.buildProject",
+    "onCommand:node-workspace-builder.cleanProject"
   ],
   "icon": "images/icon.png",
   "main": "./out/extension.js",
@@ -44,15 +46,6 @@
           "default": false,
           "description": "For whose modules does not need install dependencies before building, specifying this to `true`, you can run build scripts directly."
         },
-        "node-workspace-builder.npmInstallationSelect": {
-          "type": "string",
-          "default": "integrated",
-          "enum": [
-            "external",
-            "integrated"
-          ],
-          "description": "Specify which npm installation to build with. The option `external` means using npm installation pre-installed on your PC, the option `integrated` means using npm integrated in this extension."
-        },
         "node-workspace-builder.includedPatterns": {
           "type": "array",
           "default": [],
@@ -66,54 +59,98 @@
       }
     },
     "commands": [{
-      "command": "node-workspace-builder.buildWorkspace",
-      "title": "Build Workspace"
-    }, {
-      "command": "node-workspace-builder.watchProject",
-      "title": "Watch this project"
-    }, {
-      "command": "node-workspace-builder.buildProject",
-      "title": "Build this project"
-    }],
+        "command": "node-workspace-builder.buildWorkspace",
+        "title": "Build entire workspace"
+      },
+      {
+        "command": "node-workspace-builder.cleanWorkspace",
+        "title": "Clean entire workspace"
+      },
+      {
+        "command": "node-workspace-builder.watchProject",
+        "title": "Watch this project"
+      },
+      {
+        "command": "node-workspace-builder.buildProject",
+        "title": "Build this project"
+      },
+      {
+        "command": "node-workspace-builder.cleanProject",
+        "title": "Clean this project"
+      }
+    ],
     "menus": {
       "explorer/context": [{
-        "when": "resourceFilename == 'package.json'",
-        "command": "node-workspace-builder.watchProject",
-        "group": "nwbgroup@1"
-      }, {
-        "when": "explorerResourceIsFolder && resourceFilename != 'node_modules'",
-        "command": "node-workspace-builder.watchProject",
-        "group": "nwbgroup@1"
-      }, {
-        "when": "resourceFilename == 'package.json'",
-        "command": "node-workspace-builder.buildProject",
-        "group": "nwbgroup@2"
-      }, {
-        "when": "explorerResourceIsFolder && resourceFilename != 'node_modules'",
-        "command": "node-workspace-builder.buildProject",
-        "group": "nwbgroup@2"
-      }]
+          "when": "resourceFilename == 'package.json'",
+          "command": "node-workspace-builder.watchProject",
+          "group": "nwbgroup@1"
+        },
+        {
+          "when": "explorerResourceIsFolder && resourceFilename != 'node_modules'",
+          "command": "node-workspace-builder.watchProject",
+          "group": "nwbgroup@1"
+        },
+        {
+          "when": "resourceFilename == 'package.json'",
+          "command": "node-workspace-builder.buildProject",
+          "group": "nwbgroup@2"
+        },
+        {
+          "when": "explorerResourceIsFolder && resourceFilename != 'node_modules'",
+          "command": "node-workspace-builder.buildProject",
+          "group": "nwbgroup@2"
+        },
+        {
+          "when": "resourceFilename == 'package.json'",
+          "command": "node-workspace-builder.cleanProject",
+          "group": "nwbgroup@3"
+        },
+        {
+          "when": "explorerResourceIsFolder && resourceFilename != 'node_modules'",
+          "command": "node-workspace-builder.cleanProject",
+          "group": "nwbgroup@3"
+        }
+      ]
     },
     "keybindings": [{
-      "command": "node-workspace-builder.buildWorkspace",
-      "key": "ctrl+alt+b"
-    }, {
-      "command": "node-workspace-builder.watchProject",
-      "key": "shift+alt+w",
-      "when": "resourceFilename == 'package.json'"
-    }, {
-      "command": "node-workspace-builder.watchProject",
-      "key": "shift+alt+w",
-      "when": "explorerResourceIsFolder && resourceFilename != 'node_modules'"
-    }, {
-      "command": "node-workspace-builder.buildProject",
-      "key": "shift+alt+b",
-      "when": "resourceFilename == 'package.json'"
-    }, {
-      "command": "node-workspace-builder.buildProject",
-      "key": "shift+alt+b",
-      "when": "explorerResourceIsFolder && resourceFilename != 'node_modules'"
-    }],
+        "command": "node-workspace-builder.buildWorkspace",
+        "key": "ctrl+alt+b"
+      },
+      {
+        "command": "node-workspace-builder.cleanWorkspace",
+        "key": "ctrl+alt+c"
+      },
+      {
+        "command": "node-workspace-builder.watchProject",
+        "key": "shift+alt+w",
+        "when": "resourceFilename == 'package.json'"
+      },
+      {
+        "command": "node-workspace-builder.watchProject",
+        "key": "shift+alt+w",
+        "when": "explorerResourceIsFolder && resourceFilename != 'node_modules'"
+      },
+      {
+        "command": "node-workspace-builder.buildProject",
+        "key": "shift+alt+b",
+        "when": "resourceFilename == 'package.json'"
+      },
+      {
+        "command": "node-workspace-builder.buildProject",
+        "key": "shift+alt+b",
+        "when": "explorerResourceIsFolder && resourceFilename != 'node_modules'"
+      },
+      {
+        "command": "node-workspace-builder.cleanProject",
+        "key": "shift+alt+c",
+        "when": "resourceFilename == 'package.json'"
+      },
+      {
+        "command": "node-workspace-builder.cleanProject",
+        "key": "shift+alt+c",
+        "when": "explorerResourceIsFolder && resourceFilename != 'node_modules'"
+      }
+    ],
     "taskDefinitions": [{
       "type": "build",
       "required": [
@@ -131,16 +168,16 @@
   "devDependencies": {
     "@types/copy-paste": "^1.1.30",
     "@types/mocha": "^2.2.42",
-    "@types/node": "^10.12.21",
+    "@types/node": "latest",
     "@types/npm": "latest",
-    "@types/semver": "^6.0.0",
-    "tslint": "^5.12.1",
-    "typescript": "^3.3.1",
-    "vscode": "^1.1.28"
+    "@types/semver": "^6.0.1",
+    "tslint": "^5.18.0",
+    "typescript": "^3.5.3",
+    "vscode": "^1.1.35"
   },
   "dependencies": {
     "copy-paste": "^1.3.0",
-    "npm": "latest",
-    "semver": "^6.0.0"
+    "npm": "^6.10.0",
+    "semver": "^6.2.0"
   }
 }

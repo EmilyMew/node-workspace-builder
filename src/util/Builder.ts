@@ -8,7 +8,6 @@ import * as vscode from 'vscode';
 
 import distinct from './distinct';
 import FsHelper from './FsHelper';
-import TerminalHelper from './TerminalHelper';
 import PathConstants from '../constant/PathConstants';
 import CopyTask from '../model/CopyTask';
 import BuildTask from '../model/BuildTask';
@@ -27,74 +26,15 @@ export default class Builder {
 
   private static queue: Array<BuildTask> = [];
 
+  private static output: OutputManager;
+
   /**
-   * Build via terminal commands.
+   * Initialize
    * 
-   * @param projects - project paths
-   * @param tasks - copy file tasks
+   * @param output 
    */
-  private static terminalBuild(projects: Array<string>, tasks: Array<CopyTask>): Thenable<any> {
-    const modules = distinct(tasks, 'modulePath');
-    const configuration = vscode.workspace.getConfiguration('node-workspace-builder');
-    return vscode.window.withProgress({
-      location: vscode.ProgressLocation.Notification,
-      title: 'Building workspace',
-      cancellable: false
-    }, (progress, token) => {
-      const terminal = TerminalHelper.createTerminal();
-      let needInstallAll = false;
-      projects.forEach(projectPath => {
-        if (!FsHelper.isDirectory(`${projectPath}${PathConstants.NODE_MODULES}`)) {
-          needInstallAll = true;
-          TerminalHelper.execCdToDir(terminal, projectPath);
-          TerminalHelper.execNpmInstall(terminal);
-        }
-      });
-      modules.forEach((modulePath: string) => {
-        const needInstallDep = configuration.get('buildModulesWithoutInstall')
-          ? false
-          : !FsHelper.isDirectory(`${modulePath}${PathConstants.NODE_MODULES}`);
-        TerminalHelper.execCdToDir(terminal, modulePath);
-        if (needInstallDep) {
-          TerminalHelper.execNpmInstall(terminal);
-        }
-        TerminalHelper.execNpmRunScript(terminal, 'build');
-        // clean up after build;
-        TerminalHelper.execDelFile(terminal, `${modulePath}${PathConstants.PACK_LOCK_JSON}`);
-        TerminalHelper.execRmDir(terminal, `${modulePath}${PathConstants.NODE_MODULES}`);
-      });
-      tasks.forEach((task: CopyTask) => {
-        task.files.forEach((file: string) => {
-          if (!FsHelper.exists(task.projectDepPath) && !needInstallAll) {
-            FsHelper.mkDir(task.projectDepPath, { recursive: true });
-          }
-          const targetPath = `${task.projectDepPath}${file}`;
-          const srcPath = `${task.modulePath}${file}`;
-          TerminalHelper.execRmDir(terminal, targetPath);
-          TerminalHelper.execCopyDir(terminal, srcPath, targetPath);
-        });
-      });
-      modules.forEach((modulePath: string) => {
-        const task = tasks.find(f => f.modulePath === modulePath);
-        if (task === undefined) {
-          return;
-        }
-        task.files.forEach((file: string) => {
-          const srcPath = `${task.modulePath}${file}`;
-          TerminalHelper.execRmDir(terminal, srcPath);
-        });
-      });
-      TerminalHelper.execExit(terminal);
-      return new Promise(resolve => {
-        let event = vscode.window.onDidCloseTerminal(e => {
-          if (e.name === TerminalHelper.TERMINAL_NAME) {
-            progress.report({ message: 'Almost there...' });
-            event.dispose();
-            resolve();
-          }
-        });
-      });
-    });
+  static init(output: OutputManager) {
+    Builder.output = output;
   }
 
   /**
@@ -116,6 +56,7 @@ export default class Builder {
       return new Promise((resolve, reject) => {
         npm.load({ prefix: npmPath }, err => err ? reject(err) : resolve());
       }).then(() => {
+        let timeout: NodeJS.Timeout | null = null;
         progress.report({ message: 'Installing project dependencies...' });
         const promises = projects.map(projectPath => {
           return new Promise((resolve, reject) => {
@@ -123,15 +64,36 @@ export default class Builder {
               resolve();
             } else {
               needInstallAll = true;
-              OutputManager.log(`Start installing: ${projectPath}`);
+              Builder.output.log(`Start installing: ${projectPath}`);
               npm.commands.explore([projectPath, 'npm install'], (err, data) => {
-                err ? reject(new Error('Install failed: ' + projectPath)) : resolve();
+                const pathArr = projectPath.split(sep);
+                const projectName = pathArr[pathArr.length - 2];
+                if (err) {
+                  console.log(err);
+                  reject(new Error(`Install failed: ${projectName}`));
+                } else {
+                  progress.report({ message: `Installing success: ${projectName}` });
+                  if (timeout !== null) {
+                    clearTimeout(timeout);
+                    timeout = null;
+                  }
+                  timeout = setTimeout(() => {
+                    progress.report({ message: 'Installing project dependencies...' });
+                  }, 5 * 1000);
+                  resolve();
+                }
               });
             }
           });
         });
-        return Promise.all(promises);
+        return Promise.all(promises).then(() => {
+          if (timeout !== null) {
+            clearTimeout(timeout);
+            timeout = null;
+          }
+        });
       }).then(() => {
+        let timeout: NodeJS.Timeout | null = null;
         progress.report({ message: 'Installing module dependencies...' });
         const installModules = modules.map((modulePath: string) => {
           return new Promise((resolve, reject) => {
@@ -140,16 +102,35 @@ export default class Builder {
               : !FsHelper.isDirectory(`${modulePath}${PathConstants.NODE_MODULES}`);
             needInstallDep
               ? npm.commands.explore([modulePath, 'npm install'], (err, data) => {
-                err ? reject(new Error(`Error installing module: ${modulePath}, error: ${err}`)) : resolve();
+                const pathArr = modulePath.split(sep);
+                const projectName = pathArr[pathArr.length - 2];
+                if (err) {
+                  console.log(err);
+                  reject(new Error(`Install failed: ${projectName}`));
+                } else {
+                  progress.report({ message: `Installing success: ${projectName}` });
+                  if (timeout !== null) {
+                    clearTimeout(timeout);
+                    timeout = null;
+                  }
+                  timeout = setTimeout(() => {
+                    progress.report({ message: 'Installing module dependencies...' });
+                  }, 5 * 1000);
+                  resolve();
+                }
               })
               : resolve();
           });
         });
         return Promise.all(installModules).then(() => {
+          if (timeout !== null) {
+            clearTimeout(timeout);
+            timeout = null;
+          }
           const buildModules = modules.map((modulePath: string) => {
             progress.report({ message: 'Building modules...' });
             return new Promise((resolve, reject) => {
-              OutputManager.log(`Start building: ${modulePath}`);
+              Builder.output.log(`Start building: ${modulePath}`);
               npm.commands.explore([modulePath, 'npm run build'], (err, data) => {
                 if (err) {
                   return reject(new Error(`Error building module: ${modulePath}, error: ${err}`));
@@ -170,7 +151,7 @@ export default class Builder {
         progress.report({ message: 'Building projects...' });
         const promises = tasks.map((task: CopyTask) => {
           return new Promise((resolve, reject) => {
-            OutputManager.log(`Start building: ${task.modulePath} -> ${task.projectDepPath}`);
+            Builder.output.log(`Start building: ${task.modulePath} -> ${task.projectDepPath}`);
             const buildToProject = () => {
               const promises = task.files.map(file => {
                 return new Promise((res, rej) => {
@@ -191,7 +172,7 @@ export default class Builder {
                   FsHelper.replace(srcPath, targetPath).then(() => {
                     res();
                   }).catch((err: any) => {
-                    OutputManager.log(err);
+                    Builder.output.log(err);
                     rej(err);
                   });
                 });
@@ -200,7 +181,7 @@ export default class Builder {
             };
             setTimeout(() => {
               buildToProject().then(() => {
-                OutputManager.log(`Build succeed: ${task.modulePath}`);
+                Builder.output.log(`Build succeed: ${task.modulePath}`);
                 resolve();
               }).catch(reject);
             }, 3000);
@@ -221,7 +202,7 @@ export default class Builder {
           return Promise.all(removePromises);
         });
       }).catch(err => {
-        OutputManager.log(err);
+        Builder.output.log(err);
         Promise.reject(err);
       });
     });
@@ -278,10 +259,8 @@ export default class Builder {
   public static build(): any {
     const buildAll = (queue: Array<BuildTask>, index = 0) => {
       if (index < queue.length) {
-        const configuration = vscode.workspace.getConfiguration('node-workspace-builder');
         const task = queue[index];
-        const buildFunction = configuration.get('npmInstallationSelect') === 'integrated' ? Builder.npmBuild : Builder.terminalBuild;
-        buildFunction(task.projects, task.tasks).then(() => {
+        Builder.npmBuild(task.projects, task.tasks).then(() => {
           buildAll(queue, index + 1);
         });
       } else {
@@ -295,13 +274,13 @@ export default class Builder {
         if (Builder.building) {
           return reject(new Error('You currently have a build task running. Please wait until finished.'));
         }
-        OutputManager.show();
+        Builder.output.show();
         Builder.building = true;
         return resolve();
       }).then(() => {
         buildAll(Builder.queue);
       }).catch(err => {
-        OutputManager.log(err);
+        Builder.output.log(err);
         Builder.building = false;
       });
     };
