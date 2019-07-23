@@ -12,21 +12,23 @@ import * as vscode from 'vscode';
  */
 export default class OutputManager {
 
-  private output: vscode.OutputChannel;
+  private output: vscode.OutputChannel | undefined;
 
   /**
    * init output
    * 
    * @param output 
    */
-  constructor(output: vscode.OutputChannel) {
-    this.output = output;
+  constructor(output: vscode.OutputChannel | null) {
+    if (output !== null) {
+      this.output = output;
+    }
   }
 
   /**
    * is output enabled
    */
-  public enabled(): boolean {
+  public static enabled(): boolean {
     const configuration = vscode.workspace.getConfiguration('node-workspace-builder');
     const value = configuration.get('showOutput');
     return configuration.get('showOutput') === null || configuration.get('showOutput') === undefined
@@ -34,10 +36,19 @@ export default class OutputManager {
   }
 
   /**
+   * init output channel
+   * 
+   * @param output 
+   */
+  public init(output: vscode.OutputChannel): void {
+    this.output = output;
+  }
+
+  /**
    * show output
    */
   public show(): void {
-    if (this.enabled()) {
+    if (OutputManager.enabled() && this.output) {
       this.output.clear();
       this.output.show();
     }
@@ -50,8 +61,17 @@ export default class OutputManager {
    */
   public log(value: string): void {
     console.log(value);
-    if (this.enabled()) {
+    if (OutputManager.enabled() && this.output) {
       this.output.appendLine(value);
+    }
+  }
+
+  /**
+   * destroy output channel
+   */
+  public destroy(): void {
+    if (this.output) {
+      this.output.dispose();
     }
   }
 }

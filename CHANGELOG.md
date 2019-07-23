@@ -2,6 +2,10 @@
 
 All notable changes to the "Node Workspace Builder" extension will be documented in this file.
 
+## 0.1.13
+- `Fixed` Setting `node-workspace-builder.showOutput` is not working.
+- `Added` Added 996.ICU badge to README.md.
+
 ## 0.1.12
 - `Added` Added `clean workspace` command. You can clean all `node_module` directories of your watched web projects with this command.
 - `Added` Added `clean project` command. You can clean `node_module` directory of specified watched web project with this command.

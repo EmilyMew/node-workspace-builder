@@ -9,6 +9,9 @@
   <a href="https://marketplace.visualstudio.com/items?itemName=EmilyWang.node-workspace-builder">
     <img src="https://vsmarketplacebadge.apphb.com/rating-short/EmilyWang.node-workspace-builder.svg?style=flat-square">
   </a>
+  <a href="https://996.icu">
+    <img src="https://img.shields.io/badge/link-996.icu-red.svg" alt="996.icu" />
+  </a>
 </p>
 
 This extension helps you to sync your source code to projects' dependencies folders which depends on it automatically. Only works when your source module and your projects are in the same workspace.

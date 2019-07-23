@@ -19,8 +19,10 @@ import FsHelper from './util/FsHelper';
 let placeholder = PathConstants.PLACEHOLDER;
 
 const packReader = new PackReader();
-
-const output = vscode.window.createOutputChannel('Node Workspace Builder');
+let output: vscode.OutputChannel | null = null;
+if (OutputManager.enabled()) {
+	output = vscode.window.createOutputChannel('Node Workspace Builder');
+}
 const outputMgr = new OutputManager(output);
 Builder.init(outputMgr);
 FsHelper.init(outputMgr);
@@ -244,6 +246,15 @@ export function activate(context: vscode.ExtensionContext) {
 	});
 
 	vscode.workspace.onDidChangeConfiguration((e) => {
+		if (e.affectsConfiguration('node-workspace-builder.showOutput')) {
+			if (OutputManager.enabled()) {
+				output = vscode.window.createOutputChannel('Node Workspace Builder');
+				outputMgr.init(output);
+				outputMgr.show();
+			} else if (!OutputManager.enabled()) {
+				outputMgr.destroy();
+			}
+		}
 		if (e.affectsConfiguration('node-workspace-builder.includedPatterns')) {
 			const folders = vscode.workspace.workspaceFolders === undefined ? [] : vscode.workspace.workspaceFolders.map(folder => folder.uri.fsPath);
 			packReader.prepare(folders, placeholder).then(() => {

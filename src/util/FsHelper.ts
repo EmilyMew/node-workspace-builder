@@ -166,6 +166,8 @@ export default class FsHelper {
           let readable = fs.createReadStream(src);
           let writable = fs.createWriteStream(dst);
           readable.pipe(writable);
+          readable.close();
+          writable.close();
           return resolve();
         } else if (stats.isDirectory()) {
           const paths = fs.readdirSync(src);
@@ -214,6 +216,8 @@ export default class FsHelper {
           let readable = fs.createReadStream(src);
           let writable = fs.createWriteStream(dst);
           readable.pipe(writable);
+          readable.close();
+          writable.close();
           return resolve();
         } else if (stats.isDirectory()) {
           const srcPaths = fs.readdirSync(src);
