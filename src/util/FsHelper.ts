@@ -3,7 +3,7 @@
  * Copyright 2018 Emily36107@outlook.com All rights reserved.
  */
 import * as fs from 'fs';
-import * as path from 'path';
+import { sep } from 'path';
 import * as vscode from 'vscode';
 import OutputManager from './OutPutManager';
 
@@ -125,7 +125,7 @@ export default class FsHelper {
     }).then((paths: Array<string> | undefined) => {
       if (paths !== undefined && paths !== null) {
         const promises = paths.map(p => {
-          const _src = src + path.sep + p;
+          const _src = `${src}${sep}${p}`
           return new Promise((res, rej) => {
             FsHelper.rm(_src).then(() => {
               res();
@@ -166,8 +166,6 @@ export default class FsHelper {
           let readable = fs.createReadStream(src);
           let writable = fs.createWriteStream(dst);
           readable.pipe(writable);
-          readable.close();
-          writable.close();
           return resolve();
         } else if (stats.isDirectory()) {
           const paths = fs.readdirSync(src);
@@ -183,8 +181,8 @@ export default class FsHelper {
     }).then((paths: Array<string> | undefined) => {
       if (paths !== undefined && paths !== null) {
         const promises = paths.map(p => {
-          const _src = src + path.sep + p;
-          const _dst = dst + path.sep + p;
+          const _src = `${src}${sep}${p}`;
+          const _dst = `${dst}${sep}${p}`;
           return new Promise((resolve, reject) => {
             FsHelper.copy(_src, _dst).then(() => {
               resolve();
@@ -212,17 +210,15 @@ export default class FsHelper {
           return reject(err);
         }
         if (stats.isFile()) {
-          FsHelper.output.log(`Copy file: ${src} -> ${dst}`);
+          FsHelper.output.log(`Replace file: ${src} -> ${dst}`);
           let readable = fs.createReadStream(src);
           let writable = fs.createWriteStream(dst);
           readable.pipe(writable);
-          readable.close();
-          writable.close();
           return resolve();
         } else if (stats.isDirectory()) {
           const srcPaths = fs.readdirSync(src);
           if (fs.existsSync(dst)) {
-            const promises = fs.readdirSync(dst).filter(_dst => !fs.existsSync(src + _dst)).map(_dst => FsHelper.rm(src + _dst));
+            const promises = fs.readdirSync(dst).filter(_dst => !fs.existsSync(`${src}${sep}${_dst}`)).map(_dst => FsHelper.rm(`${src}${sep}${_dst}`));
             Promise.all(promises).then(() => {
               resolve(srcPaths);
             }).catch(err => {
@@ -238,10 +234,10 @@ export default class FsHelper {
     }).then((paths: Array<string> | undefined) => {
       if (paths !== undefined && paths !== null) {
         const promises = paths.map(p => {
-          const _src = src + path.sep + p;
-          const _dst = dst + path.sep + p;
+          const _src = `${src}${sep}${p}`;
+          const _dst = `${dst}${sep}${p}`;
           return new Promise((resolve, reject) => {
-            FsHelper.copy(_src, _dst).then(() => {
+            FsHelper.replace(_src, _dst).then(() => {
               resolve();
             }).catch(reject);
           });
