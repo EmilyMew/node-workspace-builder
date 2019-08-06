@@ -1,6 +1,6 @@
 /*
  * $Id:$
- * Copyright 2018 Emily36107@outlook.com All rights reserved.
+ * Copyright 2019 Emily36107@outlook.com All rights reserved.
  */
 import * as os from 'os';
 import * as vscode from 'vscode';

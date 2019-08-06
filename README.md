@@ -37,7 +37,7 @@ Windows, MacOS, Linux are all supported for now. Needs VS Code 1.32 or newer.
 
 ## Known Issues
 
-Sometimes though it was successfully built but does not affect immediatly if you are using webpack-dev-server.
+None.
 
 ## Extension Settings
 
@@ -45,6 +45,7 @@ This extension contributes the following settings:
 
 | Settings                                            | Description                                                                                           |
 |-----------------------------------------------------|-------------------------------------------------------------------------------------------------------|
+| `node-workspace-builder.autoBuildOnStartUp`         | Specify if build the whole workspace on start up.                                                     |
 | `node-workspace-builder.autoBuildOnSave`            | Specify if build the whole workspace on saving text documents.                                        |
 | `node-workspace-builder.autoBuildOnFoldersChanged`  | Specify if build the whole workspace on workspace folders changed.                                    |
 | `node-workspace-builder.buildModulesWithoutInstall` | For whose modules does not need install dependencies before building, specifying this to `true`, you can run build scripts directly.|

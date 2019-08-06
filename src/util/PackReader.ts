@@ -1,6 +1,6 @@
 /*
  * $Id:$
- * Copyright 2018 Emily36107@outlook.com All rights reserved.
+ * Copyright 2019 Emily36107@outlook.com All rights reserved.
  */
 import { sep } from 'path';
 import * as semver from 'semver';

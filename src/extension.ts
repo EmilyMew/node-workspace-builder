@@ -1,6 +1,6 @@
 /*
  * $Id:$
- * Copyright 2018 Emily36107@outlook.com All rights reserved.
+ * Copyright 2019 Emily36107@outlook.com All rights reserved.
  */
 import { sep } from 'path';
 // The module 'vscode' contains the VS Code extensibility API
@@ -15,6 +15,7 @@ import CopyTask from './model/CopyTask';
 import OutputManager from './util/OutPutManager';
 import Builder from './util/Builder';
 import FsHelper from './util/FsHelper';
+import Configuration from './util/Configuration';
 
 let placeholder = PathConstants.PLACEHOLDER;
 
@@ -42,8 +43,10 @@ export function activate(context: vscode.ExtensionContext) {
 	}).then(() => {
 		return packReader.prepare(folders, placeholder);
 	}).then(() => {
-		console.log('Initial build at start up.');
-		Builder.build(packReader);
+		if (Configuration.autoBuildOnStartUp()) {
+			console.log('Initial build at start up.');
+			Builder.build(packReader);
+		}
 	});
 
 	const build = vscode.commands.registerCommand('node-workspace-builder.buildWorkspace', () => {
@@ -188,13 +191,12 @@ export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(cleanProject);
 
 	const fileEventHandler = (fileName: string) => {
-		const configuration = vscode.workspace.getConfiguration('node-workspace-builder');
 		const tasks = new Array<CopyTask>();
 		const ignored = fileName.indexOf(PathConstants.PACK_LOCK_JSON) >= 0
 			|| fileName.indexOf(PathConstants.NODE_MODULES) >= 0
 			|| fileName.indexOf(PathConstants.PLACEHOLDER) >= 0
 			|| fileName.indexOf(PathConstants.PLACEHOLDER_OLD) >= 0;
-		if (configuration.get('autoBuildOnSave') && !ignored) {
+		if (Configuration.autoBuildOnSave() && !ignored) {
 			let needRebuild = false;
 			let needReprepare = false;
 			for (let i = 0; i < packReader.watchPaths.length; i++) {
@@ -237,8 +239,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 	vscode.workspace.onDidChangeWorkspaceFolders(() => {
 		const changedFolders = vscode.workspace.workspaceFolders === undefined ? [] : vscode.workspace.workspaceFolders.map(folder => folder.uri.fsPath);
-		const configuration = vscode.workspace.getConfiguration('node-workspace-builder');
-		if (configuration.get('autoBuildOnFoldersChanged')) {
+		if (Configuration.autoBuildOnFoldersChanged()) {
 			packReader.prepare(changedFolders, placeholder).then(() => {
 				Builder.build(packReader);
 			});
@@ -246,7 +247,7 @@ export function activate(context: vscode.ExtensionContext) {
 	});
 
 	vscode.workspace.onDidChangeConfiguration((e) => {
-		if (e.affectsConfiguration('node-workspace-builder.showOutput')) {
+		if (Configuration.effected(e, Configuration.SHOW_OUTPUT)) {
 			if (OutputManager.enabled()) {
 				output = vscode.window.createOutputChannel('Node Workspace Builder');
 				outputMgr.init(output);
@@ -255,7 +256,7 @@ export function activate(context: vscode.ExtensionContext) {
 				outputMgr.destroy();
 			}
 		}
-		if (e.affectsConfiguration('node-workspace-builder.includedPatterns')) {
+		if (Configuration.effected(e, Configuration.INCLUDED_PATTERNS)) {
 			const folders = vscode.workspace.workspaceFolders === undefined ? [] : vscode.workspace.workspaceFolders.map(folder => folder.uri.fsPath);
 			packReader.prepare(folders, placeholder).then(() => {
 				Builder.build(packReader);

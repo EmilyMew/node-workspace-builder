@@ -2,6 +2,9 @@
 
 All notable changes to the "Node Workspace Builder" extension will be documented in this file.
 
+## 0.1.14
+- `Added` Added configuration `node-workspace-builder.autoBuildOnStartUp` to specify if build immediately on start up.
+
 ## 0.1.13
 - `Fixed` Setting `node-workspace-builder.showOutput` is not working.
 - `Added` Added 996.ICU badge to README.md.

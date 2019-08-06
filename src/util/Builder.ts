@@ -1,6 +1,6 @@
 /*
  * $Id:$
- * Copyright 2018 Emily36107@outlook.com All rights reserved.
+ * Copyright 2019 Emily36107@outlook.com All rights reserved.
  */
 import { sep } from 'path';
 import * as npm from 'npm';
@@ -13,6 +13,7 @@ import CopyTask from '../model/CopyTask';
 import BuildTask from '../model/BuildTask';
 import PackReader from './PackReader';
 import OutputManager from './OutputManager';
+import Configuration from './Configuration';
 
 /**
  * builder.
@@ -45,7 +46,6 @@ export default class Builder {
    */
   private static npmBuild(projects: Array<string>, tasks: Array<CopyTask>): Thenable<any> {
     const modules = distinct(tasks, 'modulePath');
-    const configuration = vscode.workspace.getConfiguration('node-workspace-builder');
     return vscode.window.withProgress({
       location: vscode.ProgressLocation.Notification,
       title: 'Building workspace',
@@ -97,7 +97,7 @@ export default class Builder {
         progress.report({ message: 'Installing module dependencies...' });
         const installModules = modules.map((modulePath: string) => {
           return new Promise((resolve, reject) => {
-            const needInstallDep = configuration.get('buildModulesWithoutInstall')
+            const needInstallDep = Configuration.buildModulesWithoutInstall()
               ? false
               : !FsHelper.isDirectory(`${modulePath}${PathConstants.NODE_MODULES}`);
             needInstallDep
@@ -214,8 +214,7 @@ export default class Builder {
    * @param task 
    */
   private static validPath(path: string) {
-    const configuration = vscode.workspace.getConfiguration('node-workspace-builder');
-    let configuredIncluded: Array<string> = configuration.get('includedPatterns') || [];
+    let configuredIncluded: Array<string> = Configuration.includedPatterns();
     const modulePath = path.charAt(path.length - 1) === sep ? path.substring(0, path.lastIndexOf(sep)) : path;
     const moduleName = modulePath.substring(modulePath.lastIndexOf(sep) + 1);
     return (configuredIncluded.length === 0 || configuredIncluded.some((p: string) => new RegExp(p).test(moduleName)));

@@ -1,6 +1,6 @@
 /*
  * $Id:$
- * Copyright 2018 Emily36107@outlook.com All rights reserved.
+ * Copyright 2019 Emily36107@outlook.com All rights reserved.
  */
 import * as fs from 'fs';
 import { sep } from 'path';
@@ -125,7 +125,7 @@ export default class FsHelper {
     }).then((paths: Array<string> | undefined) => {
       if (paths !== undefined && paths !== null) {
         const promises = paths.map(p => {
-          const _src = `${src}${sep}${p}`
+          const _src = `${src}${sep}${p}`;
           return new Promise((res, rej) => {
             FsHelper.rm(_src).then(() => {
               res();

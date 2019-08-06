@@ -1,8 +1,9 @@
 /*
  * $Id:$
- * Copyright 2018 Emily36107@outlook.com All rights reserved.
+ * Copyright 2019 Emily36107@outlook.com All rights reserved.
  */
-import * as vscode from 'vscode';
+import { OutputChannel } from 'vscode';
+import Configuration from './Configuration';
 
 /**
  * output manager.
@@ -12,14 +13,14 @@ import * as vscode from 'vscode';
  */
 export default class OutputManager {
 
-  private output: vscode.OutputChannel | undefined;
+  private output: OutputChannel | undefined;
 
   /**
    * init output
    * 
    * @param output 
    */
-  constructor(output: vscode.OutputChannel | null) {
+  constructor(output: OutputChannel | null) {
     if (output !== null) {
       this.output = output;
     }
@@ -29,10 +30,7 @@ export default class OutputManager {
    * is output enabled
    */
   public static enabled(): boolean {
-    const configuration = vscode.workspace.getConfiguration('node-workspace-builder');
-    const value = configuration.get('showOutput');
-    return configuration.get('showOutput') === null || configuration.get('showOutput') === undefined
-      ? false : (value instanceof Boolean ? value : JSON.parse(String(value)));
+    return  Configuration.showOutput();
   }
 
   /**
@@ -40,7 +38,7 @@ export default class OutputManager {
    * 
    * @param output 
    */
-  public init(output: vscode.OutputChannel): void {
+  public init(output: OutputChannel): void {
     this.output = output;
   }
 
