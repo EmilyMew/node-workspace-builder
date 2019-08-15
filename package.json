@@ -2,7 +2,7 @@
     "name": "node-workspace-builder",
     "displayName": "Node Workspace Builder",
     "description": "This extension helps you to sync your source code to projects' dependencies folders which depends on it automatically. ",
-    "version": "0.1.14",
+    "version": "0.2.0",
     "author": "Emily Wang <Emily36107@outlook.com>",
     "publisher": "EmilyWang",
     "repository": {
@@ -155,13 +155,7 @@
                 "key": "shift+alt+c",
                 "when": "explorerResourceIsFolder && resourceFilename != 'node_modules'"
             }
-        ],
-        "taskDefinitions": [{
-            "type": "build",
-            "required": [
-                "task"
-            ]
-        }]
+        ]
     },
     "scripts": {
         "vscode:prepublish": "npm run compile",
@@ -174,7 +168,6 @@
         "@types/copy-paste": "^1.1.30",
         "@types/mocha": "^2.2.42",
         "@types/node": "latest",
-        "@types/npm": "latest",
         "@types/semver": "^6.0.1",
         "tslint": "^5.18.0",
         "typescript": "^3.5.3",

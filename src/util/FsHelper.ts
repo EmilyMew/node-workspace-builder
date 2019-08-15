@@ -4,7 +4,6 @@
  */
 import * as fs from 'fs';
 import { sep } from 'path';
-import * as vscode from 'vscode';
 import OutputManager from './OutPutManager';
 
 
@@ -41,7 +40,7 @@ export default class FsHelper {
    * 
    * @param src directory path
    */
-  static readDir(src: string): Array<string> {
+  static readDir(src: string): string[] {
     return fs.readdirSync(src);
   }
 
@@ -112,7 +111,10 @@ export default class FsHelper {
    * @param src path to remove
    */
   static rm(src: string) {
-    return new Promise<Array<string> | undefined>((resolve, reject) => {
+    return new Promise<string[] | undefined>((resolve, reject) => {
+      if (!FsHelper.exists(src)) {
+        return resolve();
+      }
       const stats = fs.statSync(src);
       if (stats.isFile() || stats.isSymbolicLink()) {
         FsHelper.output.log(`Delete file: ${src}`);
@@ -122,7 +124,7 @@ export default class FsHelper {
       } else if (stats.isDirectory()) {
         resolve(fs.readdirSync(src));
       }
-    }).then((paths: Array<string> | undefined) => {
+    }).then((paths: string[] | undefined) => {
       if (paths !== undefined && paths !== null) {
         const promises = paths.map(p => {
           const _src = `${src}${sep}${p}`;
@@ -156,7 +158,7 @@ export default class FsHelper {
    * @param dst copy desitination path
    */
   static copy(src: string, dst: string) {
-    return new Promise<Array<string> | undefined>((resolve, reject) => {
+    return new Promise<string[] | undefined>((resolve, reject) => {
       fs.stat(src, (err, stats) => {
         if (err) {
           return reject(err);
@@ -178,7 +180,7 @@ export default class FsHelper {
           }
         }
       });
-    }).then((paths: Array<string> | undefined) => {
+    }).then((paths: string[] | undefined) => {
       if (paths !== undefined && paths !== null) {
         const promises = paths.map(p => {
           const _src = `${src}${sep}${p}`;
@@ -204,7 +206,7 @@ export default class FsHelper {
    * @param dst copy desitination path
    */
   static replace(src: string, dst: string) {
-    return new Promise<Array<string> | undefined>((resolve, reject) => {
+    return new Promise<string[] | undefined>((resolve, reject) => {
       fs.stat(src, (err, stats) => {
         if (err) {
           return reject(err);
@@ -231,7 +233,7 @@ export default class FsHelper {
           }
         }
       });
-    }).then((paths: Array<string> | undefined) => {
+    }).then((paths: string[] | undefined) => {
       if (paths !== undefined && paths !== null) {
         const promises = paths.map(p => {
           const _src = `${src}${sep}${p}`;
@@ -247,6 +249,7 @@ export default class FsHelper {
       return Promise.resolve([]);
     }).catch((err: any) => {
       FsHelper.output.log(err);
+      return Promise.reject(err);
     });
   }
 }

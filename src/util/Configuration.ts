@@ -66,9 +66,9 @@ export default class Configuration {
     /**
      * get the included patterns configuration
      */
-    public static includedPatterns(): Array<string> {
+    public static includedPatterns(): string[] {
         const configuration = workspace.getConfiguration(DEFAULT_SECTION_NAME);
-        return <Array<string>>configuration.get(Configuration.INCLUDED_PATTERNS);
+        return <string[]>configuration.get(Configuration.INCLUDED_PATTERNS);
     }
 
     /**

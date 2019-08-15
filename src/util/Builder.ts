@@ -5,8 +5,10 @@
 import { sep } from 'path';
 import * as npm from 'npm';
 import * as vscode from 'vscode';
+import * as semver from 'semver';
 
-import distinct from './distinct';
+import distinct from './Distinct';
+import * as promise from '../mixins/Promise';
 import FsHelper from './FsHelper';
 import PathConstants from '../constant/PathConstants';
 import CopyTask from '../model/CopyTask';
@@ -14,6 +16,8 @@ import BuildTask from '../model/BuildTask';
 import PackReader from './PackReader';
 import OutputManager from './OutputManager';
 import Configuration from './Configuration';
+import Package from 'src/model/Package';
+import { once } from 'events';
 
 /**
  * builder.
@@ -44,8 +48,11 @@ export default class Builder {
    * @param projects - project paths
    * @param tasks - copy file tasks
    */
-  private static npmBuild(projects: Array<string>, tasks: Array<CopyTask>): Thenable<any> {
+  private static npmBuild(projects: string[], tasks: Array<CopyTask>): Thenable<any> {
     const modules = distinct(tasks, 'modulePath');
+    const maxListeners = npm.getMaxListeners();
+    npm.setMaxListeners(0);
+    process.setMaxListeners(0);
     return vscode.window.withProgress({
       location: vscode.ProgressLocation.Notification,
       title: 'Building workspace',
@@ -53,40 +60,60 @@ export default class Builder {
     }, (progress, token) => {
       const npmPath = `${process.env.APPDATA}${sep}npm`;
       let needInstallAll = false;
-      return new Promise((resolve, reject) => {
+      const task = new Promise((resolve, reject) => {
         npm.load({ prefix: npmPath }, err => err ? reject(err) : resolve());
       }).then(() => {
         let timeout: NodeJS.Timeout | null = null;
         progress.report({ message: 'Installing project dependencies...' });
         const promises = projects.map(projectPath => {
-          return new Promise((resolve, reject) => {
+          const executor: promise.PromiseExecutor<undefined> = (resolve, reject) => {
             if (FsHelper.isDirectory(`${projectPath}${PathConstants.NODE_MODULES}`)) {
-              resolve();
+              const pkg: Package = require(`${projectPath}${PathConstants.PACK_JSON}`);
+              const dependencies = [
+                ...PackReader.readDeps(pkg.dependencies),
+                ...PackReader.readDeps(pkg.devDependencies)
+              ];
+              const depsToUpdateOrInstall = dependencies.filter(dep => {
+                const depPath = `${projectPath}${PathConstants.NODE_MODULES}${sep}${dep.name}${sep}`;
+                if (tasks.map(task => task.projectDepPath).includes(depPath)) {
+                  // modules to build locally
+                  return false;
+                }
+                if (!FsHelper.exists(depPath) || !FsHelper.isDirectory(depPath)) {
+                  // modules not found
+                  return true;
+                }
+                const depPkg: Package = require(`${depPath}${PathConstants.PACK_JSON}`);
+                console.log(`${dep.name}.version: ${dep.version}, existing ${dep.name}.version: ${depPkg.version}, semver.satisfies: ${semver.satisfies(depPkg.version, dep.version)}`);
+                return !semver.satisfies(depPkg.version, dep.version);
+              }).map(dep => {
+                return `${dep.name}@${dep.version}`;
+              });
+              depsToUpdateOrInstall.length > 0
+                ? Builder.npmInstall(projectPath, depsToUpdateOrInstall).then(() => {
+                  resolve();
+                }) : resolve();
             } else {
               needInstallAll = true;
               Builder.output.log(`Start installing: ${projectPath}`);
-              npm.commands.explore([projectPath, 'npm install'], (err, data) => {
+              Builder.npmInstall(projectPath).then(() => {
                 const pathArr = projectPath.split(sep);
                 const projectName = pathArr[pathArr.length - 2];
-                if (err) {
-                  console.log(err);
-                  reject(new Error(`Install failed: ${projectName}`));
-                } else {
-                  progress.report({ message: `Installing success: ${projectName}` });
-                  if (timeout !== null) {
-                    clearTimeout(timeout);
-                    timeout = null;
-                  }
-                  timeout = setTimeout(() => {
-                    progress.report({ message: 'Installing project dependencies...' });
-                  }, 5 * 1000);
+                progress.report({ message: `Installing success: ${projectName}` });
+                if (timeout !== null) {
+                  clearTimeout(timeout);
+                  timeout = null;
                   resolve();
                 }
+                timeout = setTimeout(() => {
+                  progress.report({ message: 'Installing project dependencies...' });
+                }, 5 * 1000);
               });
             }
-          });
+          };
+          return executor;
         });
-        return Promise.all(promises).then(() => {
+        return promise.batch(promises, maxListeners).then(() => {
           if (timeout !== null) {
             clearTimeout(timeout);
             timeout = null;
@@ -96,76 +123,85 @@ export default class Builder {
         let timeout: NodeJS.Timeout | null = null;
         progress.report({ message: 'Installing module dependencies...' });
         const installModules = modules.map((modulePath: string) => {
-          return new Promise((resolve, reject) => {
-            const needInstallDep = Configuration.buildModulesWithoutInstall()
-              ? false
+          const executor: promise.PromiseExecutor<undefined> = (resolve, reject) => {
+            const needInstallDep = Configuration.buildModulesWithoutInstall() ? false
               : !FsHelper.isDirectory(`${modulePath}${PathConstants.NODE_MODULES}`);
-            needInstallDep
-              ? npm.commands.explore([modulePath, 'npm install'], (err, data) => {
-                const pathArr = modulePath.split(sep);
-                const projectName = pathArr[pathArr.length - 2];
-                if (err) {
-                  console.log(err);
-                  reject(new Error(`Install failed: ${projectName}`));
-                } else {
-                  progress.report({ message: `Installing success: ${projectName}` });
-                  if (timeout !== null) {
-                    clearTimeout(timeout);
-                    timeout = null;
-                  }
-                  timeout = setTimeout(() => {
-                    progress.report({ message: 'Installing module dependencies...' });
-                  }, 5 * 1000);
-                  resolve();
-                }
-              })
-              : resolve();
-          });
+            if (!needInstallDep) {
+              return resolve();
+            }
+            Builder.npmInstall(modulePath).then(() => {
+              const pathArr = modulePath.split(sep);
+              const projectName = pathArr[pathArr.length - 2];
+              progress.report({ message: `Installing success: ${projectName}` });
+              if (timeout !== null) {
+                clearTimeout(timeout);
+                timeout = null;
+                resolve();
+              }
+              timeout = setTimeout(() => {
+                progress.report({ message: 'Installing module dependencies...' });
+              }, 5 * 1000);
+            });
+          };
+          return executor;
         });
-        return Promise.all(installModules).then(() => {
+        return promise.batch(installModules, maxListeners).then(() => {
           if (timeout !== null) {
             clearTimeout(timeout);
             timeout = null;
           }
           const buildModules = modules.map((modulePath: string) => {
             progress.report({ message: 'Building modules...' });
-            return new Promise((resolve, reject) => {
+            const executor: promise.PromiseExecutor<undefined> = (resolve, reject) => {
               Builder.output.log(`Start building: ${modulePath}`);
-              npm.commands.explore([modulePath, 'npm run build'], (err, data) => {
+              const prefix = Object.getOwnPropertyDescriptor(npm, 'prefix');
+              if (prefix && prefix.set) {
+                prefix.set(modulePath);
+              }
+              npm.commands['run-script'](['build'], (err, result) => {
                 if (err) {
-                  return reject(new Error(`Error building module: ${modulePath}, error: ${err}`));
+                  return reject && reject(new Error(`Error building module: ${modulePath}, error: ${err}`));
                 }
+                const promises = [];
                 if (FsHelper.exists(`${modulePath}${PathConstants.PACK_LOCK_JSON}`)) {
-                  FsHelper.rm(`${modulePath}${PathConstants.PACK_LOCK_JSON}`);
+                  promises.push(FsHelper.rm(`${modulePath}${PathConstants.PACK_LOCK_JSON}`));
                 }
                 if (FsHelper.exists(`${modulePath}${PathConstants.NODE_MODULES}`)) {
-                  FsHelper.rm(`${modulePath}${PathConstants.NODE_MODULES}`);
+                  promises.push(FsHelper.rm(`${modulePath}${PathConstants.NODE_MODULES}`));
                 }
-                resolve();
+                Promise.all(promises).then(() => {
+                  resolve();
+                });
               });
-            });
+            };
+            return executor;
           });
-          return Promise.all(buildModules);
+          return promise.batch(buildModules, maxListeners);
         });
       }).then(() => {
         progress.report({ message: 'Building projects...' });
         const promises = tasks.map((task: CopyTask) => {
-          return new Promise((resolve, reject) => {
-            Builder.output.log(`Start building: ${task.modulePath} -> ${task.projectDepPath}`);
+          const executor: promise.PromiseExecutor<undefined> = (resolve, reject) => {
+            Builder.output.log(`Start synchronizing: ${task.modulePath} -> ${task.projectDepPath}`);
             const buildToProject = () => {
-              const promises = task.files.map(file => {
-                return new Promise((res, rej) => {
+              const pros = task.files.map(file => {
+                const executor: promise.PromiseExecutor<undefined> = (res, rej) => {
                   if (!FsHelper.exists(task.projectDepPath) && !needInstallAll) {
                     FsHelper.mkDir(task.projectDepPath, { recursive: true });
                   }
                   const targetPath = `${task.projectDepPath}${file}`;
                   const srcPath = `${task.modulePath}${file}`;
                   if (!FsHelper.exists(srcPath)) {
-                    console.log('try again after 500ms.');
+                    console.log(`path: ${srcPath} is not built, try again after 500ms.`);
                     setTimeout(() => {
                       buildToProject().then(() => {
                         res();
-                      }).catch(rej);
+                      }).catch((err: any) => {
+                        Builder.output.log(err);
+                        if (rej !== undefined) {
+                          rej(err);
+                        }
+                      });
                     }, 500);
                     return;
                   }
@@ -173,38 +209,53 @@ export default class Builder {
                     res();
                   }).catch((err: any) => {
                     Builder.output.log(err);
-                    rej(err);
+                    if (rej !== undefined) {
+                      rej(err);
+                    }
                   });
-                });
+                };
+                return executor;
               });
-              return Promise.all(promises);
+              return promise.batch(pros, maxListeners);
             };
-            setTimeout(() => {
-              buildToProject().then(() => {
-                Builder.output.log(`Build succeed: ${task.modulePath}`);
-                resolve();
-              }).catch(reject);
-            }, 3000);
-          });
+            buildToProject().then(() => {
+              Builder.output.log(`Synchronize succeed: ${task.modulePath}`);
+              resolve();
+            }).catch(reject);
+          };
+          return executor;
         });
-        return Promise.all(promises).then(() => {
-          const removePromises = modules.map(modulePath => {
+        return promise.batch(promises, maxListeners).then(() => {
+          const removePromises = modules.reduce((result, modulePath) => {
+            progress.report({ message: 'Cleaning modules...' });
             const task = tasks.find(f => f.modulePath === modulePath);
             if (task === undefined) {
-              return Promise.resolve([]);
+              return result;
             }
-            const filePromises = task.files.map((file: string) => {
-              const srcPath = `${task.modulePath}${file}`;
-              return FsHelper.exists(srcPath) ? FsHelper.rm(srcPath) : Promise.resolve();
+            const files = task.files.map((file: string) => {
+              const executor: promise.PromiseExecutor<undefined> = (resolve, reject) => {
+                const srcPath = `${task.modulePath}${file}`;
+                if (FsHelper.exists(srcPath)) {
+                  FsHelper.rm(srcPath).then(() => {
+                    resolve();
+                  }).catch(reject);
+                } else {
+                  resolve();
+                }
+              };
+              return executor;
             });
-            return Promise.all(filePromises);
-          });
-          return Promise.all(removePromises);
+            return [...result, ...files];
+          }, []);
+          return promise.batch(removePromises, maxListeners);
         });
+      }).then(() => {
+        Builder.output.log('All build tasks had been finished.');
       }).catch(err => {
         Builder.output.log(err);
         Promise.reject(err);
       });
+      return task;
     });
   }
 
@@ -214,10 +265,32 @@ export default class Builder {
    * @param task 
    */
   private static validPath(path: string) {
-    let configuredIncluded: Array<string> = Configuration.includedPatterns();
+    let configuredIncluded: string[] = Configuration.includedPatterns();
     const modulePath = path.charAt(path.length - 1) === sep ? path.substring(0, path.lastIndexOf(sep)) : path;
     const moduleName = modulePath.substring(modulePath.lastIndexOf(sep) + 1);
     return (configuredIncluded.length === 0 || configuredIncluded.some((p: string) => new RegExp(p).test(moduleName)));
+  }
+
+  /**
+   * run npm install
+   * 
+   * @param path package folder path
+   */
+  private static npmInstall(path: string, dependencies?: string[]): Promise<unknown> {
+    const deps = dependencies || [];
+    console.log(`> npm intall ${deps.join(' ')}`);
+    return new Promise((resolve, reject) => {
+      npm.commands.install(path, deps, (err: any, data: any) => {
+        const pathArr = path.split(sep);
+        const projectName = pathArr[pathArr.length - 2];
+        if (err) {
+          console.log(err);
+          reject(new Error(`Install failed: ${projectName}`));
+        } else {
+          resolve();
+        }
+      });
+    });
   }
 
   /**
@@ -250,7 +323,7 @@ export default class Builder {
    * @param projects - project paths
    * @param tasks - copy file tasks
    */
-  static build(projects: Array<string>, tasks: Array<CopyTask>): any;
+  static build(projects: string[], tasks: Array<CopyTask>): any;
 
   /**
    * Start build task.
@@ -267,7 +340,7 @@ export default class Builder {
         Builder.building = false;
       }
     };
-    const build = (projects: Array<string>, tasks: Array<CopyTask>) => {
+    const build = (projects: string[], tasks: Array<CopyTask>) => {
       new Promise((resolve, reject) => {
         Builder.queue.push(new BuildTask(projects.filter(Builder.validPath), tasks.filter(Builder.validTask)));
         if (Builder.building) {

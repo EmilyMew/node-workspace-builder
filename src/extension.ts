@@ -155,7 +155,7 @@ export function activate(context: vscode.ExtensionContext) {
 	};
 
 	const buildProject = vscode.commands.registerCommand('node-workspace-builder.buildProject', (uri) => {
-		getWatchedProjects(uri).then((files: Array<string>) => {
+		getWatchedProjects(uri).then((files: string[]) => {
 			const tasks = new Array<CopyTask>();
 			files.forEach(file => {
 				tasks.splice(tasks.length, 0, ...packReader.tasks.filter(f => f.projectDepPath.includes(file)));
@@ -167,7 +167,7 @@ export function activate(context: vscode.ExtensionContext) {
 	});
 
 	const cleanProject = vscode.commands.registerCommand('node-workspace-builder.cleanProject', (uri) => {
-		getWatchedProjects(uri).then((files: Array<string>) => {
+		getWatchedProjects(uri).then((files: string[]) => {
 			vscode.window.withProgress({
 				location: vscode.ProgressLocation.Notification,
 				title: 'Cleaning project',

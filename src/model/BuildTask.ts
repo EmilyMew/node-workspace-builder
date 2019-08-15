@@ -11,10 +11,10 @@ import CopyTask from './CopyTask';
  * @since 2019.04.30
  */
 export default class BuildTask {
-  public projects: Array<string>;
+  public projects: string[];
   public tasks: Array<CopyTask>;
 
-  constructor(projects: Array<string>, tasks: Array<CopyTask>) {
+  constructor(projects: string[], tasks: Array<CopyTask>) {
     this.projects = projects;
     this.tasks = tasks;
   }

@@ -30,8 +30,8 @@ const getAllPackDeps = (pack: Pack, packMap: Map<string, Pack>, projectPack: Pac
 
 };
 
-const scan = async (root: string, matches: string, ignores: Array<string> = []): Promise<Array<string>> => {
-  let paths = new Array<string>();
+const scan = async (root: string, matches: string, ignores: string[] = []): Promise<string[]> => {
+  let paths: string[] = [];
   const files = FsHelper.readDir(root);
   files.forEach((file: any) => {
     const filePath = `${root}${sep}${file}`;
@@ -63,20 +63,20 @@ export default class PackReader {
 
   public packMap: Map<string, Pack> = new Map<string, Pack>();
 
-  public projects: Array<string> = new Array<string>();
+  public projects: string[] = [];
 
   public tasks: Array<CopyTask> = new Array<CopyTask>();
 
-  public watchPaths: Array<string> = new Array<string>();
+  public watchPaths: string[] = [];
 
   /**
    * prepare tasks
    * 
    * @param roots vscode workspace root paths
    */
-  prepare(roots: Array<string>, placeholder: string = PathConstants.PLACEHOLDER): Promise<unknown[]> {
-    this.watchPaths = new Array<string>();
-    this.projects = new Array<string>();
+  prepare(roots: string[], placeholder: string = PathConstants.PLACEHOLDER): Promise<unknown[]> {
+    this.watchPaths = [];
+    this.projects = [];
     const promises = roots.map(root => {
       return new Promise((resolve) => {
         if (root === undefined || root === null) {
@@ -87,12 +87,9 @@ export default class PackReader {
             scan(root, PathConstants.PACK_JSON, [PathConstants.NODE_MODULES, PathConstants.GIT]).then(packFiles => {
               packFiles.forEach(filePath => {
                 let pack = require(filePath);
-                let dependencies = new Array<Dep>();
+                let dependencies = PackReader.readDeps(pack.dependencies);
                 if (pack.dependencies !== null && pack.dependencies !== undefined) {
-                  Object.keys(pack.dependencies).forEach((key: string) => {
-                    const dep = new Dep(key, pack.dependencies[key]);
-                    dependencies.push(dep);
-                  });
+                  dependencies = PackReader.readDeps(pack.dependencies);
                 }
                 const watch = placeholders.includes(filePath.replace(PathConstants.PACK_JSON, placeholder));
                 if (watch) {
@@ -118,5 +115,21 @@ export default class PackReader {
       });
     });
     return Promise.all(promises);
+  }
+
+  /**
+   * serialize dependencies
+   * 
+   * @param deps 
+   */
+  public static readDeps(deps: Object | undefined | null): Array<Dep> {
+    if (deps === null || deps === undefined) {
+      return [];
+    }
+    return Object.entries(deps).map((value: [string, any], index: number) => {
+      const name = value[0];
+      const version: string = value[1];
+      return new Dep(name, version);
+    });
   }
 }

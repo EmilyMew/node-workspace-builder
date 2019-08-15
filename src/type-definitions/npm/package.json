@@ -1,0 +1,55 @@
+{
+  "_from": "@types/npm",
+  "_id": "@types/npm@2.0.30",
+  "_inBundle": false,
+  "_integrity": "sha1-hxzpa+fDqJaH4kBWnzgrxodIhgA=",
+  "_location": "/@types/npm",
+  "_phantomChildren": {},
+  "_requested": {
+    "type": "tag",
+    "registry": true,
+    "raw": "@types/npm",
+    "name": "@types/npm",
+    "escapedName": "@types%2fnpm",
+    "scope": "@types",
+    "rawSpec": "",
+    "saveSpec": null,
+    "fetchSpec": "latest"
+  },
+  "_requiredBy": [
+    "#USER",
+    "/"
+  ],
+  "_resolved": "http://nexus.gracesleon.com/repository/npm-group/@types/npm/-/npm-2.0.30.tgz",
+  "_shasum": "871ce96be7c3a89687e240569f382bc687488600",
+  "_spec": "@types/npm",
+  "_where": "C:\\Users\\Emily\\OneDrive\\Data\\Emily\\emily.git\\node-workspace-builder",
+  "bugs": {
+    "url": "https://github.com/DefinitelyTyped/DefinitelyTyped/issues"
+  },
+  "bundleDependencies": false,
+  "contributors": [
+    {
+      "name": "Maxime LUCE",
+      "url": "https://github.com/SomaticIT"
+    }
+  ],
+  "dependencies": {
+    "@types/node": "*"
+  },
+  "deprecated": false,
+  "description": "TypeScript definitions for npm",
+  "homepage": "https://github.com/DefinitelyTyped/DefinitelyTyped#readme",
+  "license": "MIT",
+  "main": "",
+  "name": "@types/npm",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DefinitelyTyped/DefinitelyTyped.git"
+  },
+  "scripts": {},
+  "typeScriptVersion": "2.0",
+  "types": "index",
+  "typesPublisherContentHash": "e011970182ddf7a50e0ef32aefb4346abaed217d00638c7a0b1390e6d7431c1d",
+  "version": "2.0.30"
+}
