@@ -2,6 +2,9 @@
 
 All notable changes to the "Node Workspace Builder" extension will be documented in this file.
 
+## 0.2.1
+- `Fixed` Stacks on install tasks.
+
 ## 0.2.0
 - `Changed` When you run a build task, this extension will update your project dependencies which are not satisfied with version in your `package.json` for now.
 - `Fixed` When you removed some files from your modules, the build task ran into a problem.

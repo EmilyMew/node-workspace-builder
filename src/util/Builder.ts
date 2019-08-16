@@ -17,7 +17,6 @@ import PackReader from './PackReader';
 import OutputManager from './OutputManager';
 import Configuration from './Configuration';
 import Package from 'src/model/Package';
-import { once } from 'events';
 
 /**
  * builder.
@@ -51,12 +50,10 @@ export default class Builder {
   private static npmBuild(projects: string[], tasks: Array<CopyTask>): Thenable<any> {
     const modules = distinct(tasks, 'modulePath');
     const maxListeners = npm.getMaxListeners();
-    npm.setMaxListeners(0);
-    process.setMaxListeners(0);
     return vscode.window.withProgress({
       location: vscode.ProgressLocation.Notification,
       title: 'Building workspace',
-      cancellable: false
+      cancellable: true
     }, (progress, token) => {
       const npmPath = `${process.env.APPDATA}${sep}npm`;
       let needInstallAll = false;
@@ -92,7 +89,7 @@ export default class Builder {
               depsToUpdateOrInstall.length > 0
                 ? Builder.npmInstall(projectPath, depsToUpdateOrInstall).then(() => {
                   resolve();
-                }) : resolve();
+                }).catch(reject) : resolve();
             } else {
               needInstallAll = true;
               Builder.output.log(`Start installing: ${projectPath}`);
@@ -100,7 +97,9 @@ export default class Builder {
                 const pathArr = projectPath.split(sep);
                 const projectName = pathArr[pathArr.length - 2];
                 progress.report({ message: `Installing success: ${projectName}` });
-                if (timeout !== null) {
+                if (timeout === null) {
+                  resolve();
+                } else {
                   clearTimeout(timeout);
                   timeout = null;
                   resolve();
@@ -108,7 +107,7 @@ export default class Builder {
                 timeout = setTimeout(() => {
                   progress.report({ message: 'Installing project dependencies...' });
                 }, 5 * 1000);
-              });
+              }).catch(reject);
             }
           };
           return executor;
@@ -133,7 +132,9 @@ export default class Builder {
               const pathArr = modulePath.split(sep);
               const projectName = pathArr[pathArr.length - 2];
               progress.report({ message: `Installing success: ${projectName}` });
-              if (timeout !== null) {
+              if (timeout === null) {
+                resolve();
+              } else {
                 clearTimeout(timeout);
                 timeout = null;
                 resolve();
@@ -141,7 +142,7 @@ export default class Builder {
               timeout = setTimeout(() => {
                 progress.report({ message: 'Installing module dependencies...' });
               }, 5 * 1000);
-            });
+            }).catch(reject);
           };
           return executor;
         });
@@ -252,7 +253,9 @@ export default class Builder {
       }).then(() => {
         Builder.output.log('All build tasks had been finished.');
       }).catch(err => {
+        Builder.building = false;
         Builder.output.log(err);
+        progress.report({ increment: 100 });
         Promise.reject(err);
       });
       return task;
