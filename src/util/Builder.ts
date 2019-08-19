@@ -10,6 +10,7 @@ import * as semver from 'semver';
 import distinct from './Distinct';
 import * as promise from '../mixins/Promise';
 import FsHelper from './FsHelper';
+import NpmHelper from './NpmHelper';
 import PathConstants from '../constant/PathConstants';
 import CopyTask from '../model/CopyTask';
 import BuildTask from '../model/BuildTask';
@@ -53,19 +54,21 @@ export default class Builder {
     return vscode.window.withProgress({
       location: vscode.ProgressLocation.Notification,
       title: 'Building workspace',
-      cancellable: true
+      cancellable: false
     }, (progress, token) => {
       const npmPath = `${process.env.APPDATA}${sep}npm`;
       let needInstallAll = false;
-      const task = new Promise((resolve, reject) => {
-        npm.load({ prefix: npmPath }, err => err ? reject(err) : resolve());
-      }).then(() => {
+      const task = NpmHelper.load(npmPath).then(() => {
         let timeout: NodeJS.Timeout | null = null;
         progress.report({ message: 'Installing project dependencies...' });
         const promises = projects.map(projectPath => {
           const executor: promise.PromiseExecutor<undefined> = (resolve, reject) => {
+            const packFile = `${projectPath}${PathConstants.PACK_JSON}`;
+            if (!FsHelper.exists(packFile)) {
+              return resolve();
+            }
             if (FsHelper.isDirectory(`${projectPath}${PathConstants.NODE_MODULES}`)) {
-              const pkg: Package = require(`${projectPath}${PathConstants.PACK_JSON}`);
+              const pkg: Package = require(packFile);
               const dependencies = [
                 ...PackReader.readDeps(pkg.dependencies),
                 ...PackReader.readDeps(pkg.devDependencies)
@@ -76,7 +79,7 @@ export default class Builder {
                   // modules to build locally
                   return false;
                 }
-                if (!FsHelper.exists(depPath) || !FsHelper.isDirectory(depPath)) {
+                if (!FsHelper.exists(depPath) || !FsHelper.isDirectory(depPath) || !FsHelper.exists(`${depPath}${PathConstants.PACK_JSON}`)) {
                   // modules not found
                   return true;
                 }
@@ -87,13 +90,13 @@ export default class Builder {
                 return `${dep.name}@${dep.version}`;
               });
               depsToUpdateOrInstall.length > 0
-                ? Builder.npmInstall(projectPath, depsToUpdateOrInstall).then(() => {
+                ? NpmHelper.install(projectPath, depsToUpdateOrInstall).then(() => {
                   resolve();
                 }).catch(reject) : resolve();
             } else {
               needInstallAll = true;
               Builder.output.log(`Start installing: ${projectPath}`);
-              Builder.npmInstall(projectPath).then(() => {
+              NpmHelper.install(projectPath).then(() => {
                 const pathArr = projectPath.split(sep);
                 const projectName = pathArr[pathArr.length - 2];
                 progress.report({ message: `Installing success: ${projectName}` });
@@ -128,7 +131,7 @@ export default class Builder {
             if (!needInstallDep) {
               return resolve();
             }
-            Builder.npmInstall(modulePath).then(() => {
+            NpmHelper.install(modulePath).then(() => {
               const pathArr = modulePath.split(sep);
               const projectName = pathArr[pathArr.length - 2];
               progress.report({ message: `Installing success: ${projectName}` });
@@ -153,29 +156,7 @@ export default class Builder {
           }
           const buildModules = modules.map((modulePath: string) => {
             progress.report({ message: 'Building modules...' });
-            const executor: promise.PromiseExecutor<undefined> = (resolve, reject) => {
-              Builder.output.log(`Start building: ${modulePath}`);
-              const prefix = Object.getOwnPropertyDescriptor(npm, 'prefix');
-              if (prefix && prefix.set) {
-                prefix.set(modulePath);
-              }
-              npm.commands['run-script'](['build'], (err, result) => {
-                if (err) {
-                  return reject && reject(new Error(`Error building module: ${modulePath}, error: ${err}`));
-                }
-                const promises = [];
-                if (FsHelper.exists(`${modulePath}${PathConstants.PACK_LOCK_JSON}`)) {
-                  promises.push(FsHelper.rm(`${modulePath}${PathConstants.PACK_LOCK_JSON}`));
-                }
-                if (FsHelper.exists(`${modulePath}${PathConstants.NODE_MODULES}`)) {
-                  promises.push(FsHelper.rm(`${modulePath}${PathConstants.NODE_MODULES}`));
-                }
-                Promise.all(promises).then(() => {
-                  resolve();
-                });
-              });
-            };
-            return executor;
+            return NpmHelper.getBuildExecutor(modulePath);
           });
           return promise.batch(buildModules, maxListeners);
         });
@@ -272,28 +253,6 @@ export default class Builder {
     const modulePath = path.charAt(path.length - 1) === sep ? path.substring(0, path.lastIndexOf(sep)) : path;
     const moduleName = modulePath.substring(modulePath.lastIndexOf(sep) + 1);
     return (configuredIncluded.length === 0 || configuredIncluded.some((p: string) => new RegExp(p).test(moduleName)));
-  }
-
-  /**
-   * run npm install
-   * 
-   * @param path package folder path
-   */
-  private static npmInstall(path: string, dependencies?: string[]): Promise<unknown> {
-    const deps = dependencies || [];
-    console.log(`> npm intall ${deps.join(' ')}`);
-    return new Promise((resolve, reject) => {
-      npm.commands.install(path, deps, (err: any, data: any) => {
-        const pathArr = path.split(sep);
-        const projectName = pathArr[pathArr.length - 2];
-        if (err) {
-          console.log(err);
-          reject(new Error(`Install failed: ${projectName}`));
-        } else {
-          resolve();
-        }
-      });
-    });
   }
 
   /**

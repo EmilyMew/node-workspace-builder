@@ -2,6 +2,9 @@
 
 All notable changes to the "Node Workspace Builder" extension will be documented in this file.
 
+## 0.2.2
+- `Fixed` Stacks on updating dependencies.
+
 ## 0.2.1
 - `Fixed` Stacks on install tasks.
 
