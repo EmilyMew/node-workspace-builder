@@ -1,181 +1,181 @@
 {
-    "name": "node-workspace-builder",
-    "displayName": "Node Workspace Builder",
-    "description": "This extension helps you to sync your source code to projects' dependencies folders which depends on it automatically. ",
-    "version": "0.2.2",
-    "author": "Emily Wang <Emily36107@outlook.com>",
-    "publisher": "EmilyWang",
-    "repository": {
-        "type": "git",
-        "url": "https://github.com/EmilyMew/node-workspace-builder.git"
-    },
-    "engines": {
-        "vscode": "^1.32.0"
-    },
-    "categories": [
-        "Other"
-    ],
-    "activationEvents": [
-        "workspaceContains:**/.nodewebproject",
-        "workspaceContains:**/.nodedwswatcher",
-        "onCommand:node-workspace-builder.buildWorkspace",
-        "onCommand:node-workspace-builder.cleanWorkspace",
-        "onCommand:node-workspace-builder.watchProject",
-        "onCommand:node-workspace-builder.buildProject",
-        "onCommand:node-workspace-builder.cleanProject"
-    ],
-    "icon": "images/icon.png",
-    "main": "./out/extension.js",
-    "contributes": {
-        "configuration": {
-            "type": "object",
-            "title": "Node workspace builder configuration",
-            "properties": {
-                "node-workspace-builder.autoBuildOnStartUp": {
-                    "type": "boolean",
-                    "default": true,
-                    "description": "Specify if build the whole workspace on start up."
-                },
-                "node-workspace-builder.autoBuildOnSave": {
-                    "type": "boolean",
-                    "default": true,
-                    "description": "Specify if build the whole workspace on saving text documents."
-                },
-                "node-workspace-builder.autoBuildOnFoldersChanged": {
-                    "type": "boolean",
-                    "default": true,
-                    "description": "Specify if build the whole workspace on workspace folders changed."
-                },
-                "node-workspace-builder.buildModulesWithoutInstall": {
-                    "type": "boolean",
-                    "default": false,
-                    "description": "For whose modules does not need install dependencies before building, specifying this to `true`, you can run build scripts directly."
-                },
-                "node-workspace-builder.includedPatterns": {
-                    "type": "array",
-                    "default": [],
-                    "description": "Specify modules to build using regExp patterns. If leave it as an empty array, this extension will build all modules in workspace."
-                },
-                "node-workspace-builder.showOutput": {
-                    "type": "boolean",
-                    "default": false,
-                    "description": "Specify if show logs in output pannel."
-                }
-            }
+  "name": "node-workspace-builder",
+  "displayName": "Node Workspace Builder",
+  "description": "This extension helps you to sync your source code to projects' dependencies folders which depends on it automatically. ",
+  "version": "0.2.3",
+  "author": "Emily Wang <Emily36107@outlook.com>",
+  "publisher": "EmilyWang",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/EmilyMew/node-workspace-builder.git"
+  },
+  "engines": {
+    "vscode": "^1.32.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "workspaceContains:**/.nodewebproject",
+    "workspaceContains:**/.nodedwswatcher",
+    "onCommand:node-workspace-builder.buildWorkspace",
+    "onCommand:node-workspace-builder.cleanWorkspace",
+    "onCommand:node-workspace-builder.watchProject",
+    "onCommand:node-workspace-builder.buildProject",
+    "onCommand:node-workspace-builder.cleanProject"
+  ],
+  "icon": "images/icon.png",
+  "main": "./out/extension.js",
+  "contributes": {
+    "configuration": {
+      "type": "object",
+      "title": "Node workspace builder configuration",
+      "properties": {
+        "node-workspace-builder.autoBuildOnStartUp": {
+          "type": "boolean",
+          "default": true,
+          "description": "Specify if build the whole workspace on start up."
         },
-        "commands": [{
-                "command": "node-workspace-builder.buildWorkspace",
-                "title": "Build entire workspace"
-            },
-            {
-                "command": "node-workspace-builder.cleanWorkspace",
-                "title": "Clean entire workspace"
-            },
-            {
-                "command": "node-workspace-builder.watchProject",
-                "title": "Watch this project"
-            },
-            {
-                "command": "node-workspace-builder.buildProject",
-                "title": "Build this project"
-            },
-            {
-                "command": "node-workspace-builder.cleanProject",
-                "title": "Clean this project"
-            }
-        ],
-        "menus": {
-            "explorer/context": [{
-                    "when": "resourceFilename == 'package.json'",
-                    "command": "node-workspace-builder.watchProject",
-                    "group": "nwbgroup@1"
-                },
-                {
-                    "when": "explorerResourceIsFolder && resourceFilename != 'node_modules'",
-                    "command": "node-workspace-builder.watchProject",
-                    "group": "nwbgroup@1"
-                },
-                {
-                    "when": "resourceFilename == 'package.json'",
-                    "command": "node-workspace-builder.buildProject",
-                    "group": "nwbgroup@2"
-                },
-                {
-                    "when": "explorerResourceIsFolder && resourceFilename != 'node_modules'",
-                    "command": "node-workspace-builder.buildProject",
-                    "group": "nwbgroup@2"
-                },
-                {
-                    "when": "resourceFilename == 'package.json'",
-                    "command": "node-workspace-builder.cleanProject",
-                    "group": "nwbgroup@3"
-                },
-                {
-                    "when": "explorerResourceIsFolder && resourceFilename != 'node_modules'",
-                    "command": "node-workspace-builder.cleanProject",
-                    "group": "nwbgroup@3"
-                }
-            ]
+        "node-workspace-builder.autoBuildOnSave": {
+          "type": "boolean",
+          "default": true,
+          "description": "Specify if build the whole workspace on saving text documents."
         },
-        "keybindings": [{
-                "command": "node-workspace-builder.buildWorkspace",
-                "key": "ctrl+alt+b"
-            },
-            {
-                "command": "node-workspace-builder.cleanWorkspace",
-                "key": "ctrl+alt+c"
-            },
-            {
-                "command": "node-workspace-builder.watchProject",
-                "key": "shift+alt+w",
-                "when": "resourceFilename == 'package.json'"
-            },
-            {
-                "command": "node-workspace-builder.watchProject",
-                "key": "shift+alt+w",
-                "when": "explorerResourceIsFolder && resourceFilename != 'node_modules'"
-            },
-            {
-                "command": "node-workspace-builder.buildProject",
-                "key": "shift+alt+b",
-                "when": "resourceFilename == 'package.json'"
-            },
-            {
-                "command": "node-workspace-builder.buildProject",
-                "key": "shift+alt+b",
-                "when": "explorerResourceIsFolder && resourceFilename != 'node_modules'"
-            },
-            {
-                "command": "node-workspace-builder.cleanProject",
-                "key": "shift+alt+c",
-                "when": "resourceFilename == 'package.json'"
-            },
-            {
-                "command": "node-workspace-builder.cleanProject",
-                "key": "shift+alt+c",
-                "when": "explorerResourceIsFolder && resourceFilename != 'node_modules'"
-            }
-        ]
+        "node-workspace-builder.autoBuildOnFoldersChanged": {
+          "type": "boolean",
+          "default": true,
+          "description": "Specify if build the whole workspace on workspace folders changed."
+        },
+        "node-workspace-builder.buildModulesWithoutInstall": {
+          "type": "boolean",
+          "default": false,
+          "description": "For whose modules does not need install dependencies before building, specifying this to `true`, you can run build scripts directly."
+        },
+        "node-workspace-builder.includedPatterns": {
+          "type": "array",
+          "default": [],
+          "description": "Specify modules to build using regExp patterns. If leave it as an empty array, this extension will build all modules in workspace."
+        },
+        "node-workspace-builder.showOutput": {
+          "type": "boolean",
+          "default": false,
+          "description": "Specify if show logs in output pannel."
+        }
+      }
     },
-    "scripts": {
-        "vscode:prepublish": "npm run compile",
-        "compile": "tsc -p ./",
-        "watch": "tsc -watch -p ./",
-        "postinstall": "node ./node_modules/vscode/bin/install",
-        "test": "npm run compile && node ./node_modules/vscode/bin/test"
+    "commands": [{
+        "command": "node-workspace-builder.buildWorkspace",
+        "title": "Build entire workspace"
+      },
+      {
+        "command": "node-workspace-builder.cleanWorkspace",
+        "title": "Clean entire workspace"
+      },
+      {
+        "command": "node-workspace-builder.watchProject",
+        "title": "Watch this project"
+      },
+      {
+        "command": "node-workspace-builder.buildProject",
+        "title": "Build this project"
+      },
+      {
+        "command": "node-workspace-builder.cleanProject",
+        "title": "Clean this project"
+      }
+    ],
+    "menus": {
+      "explorer/context": [{
+          "when": "resourceFilename == 'package.json'",
+          "command": "node-workspace-builder.watchProject",
+          "group": "nwbgroup@1"
+        },
+        {
+          "when": "explorerResourceIsFolder && resourceFilename != 'node_modules'",
+          "command": "node-workspace-builder.watchProject",
+          "group": "nwbgroup@1"
+        },
+        {
+          "when": "resourceFilename == 'package.json'",
+          "command": "node-workspace-builder.buildProject",
+          "group": "nwbgroup@2"
+        },
+        {
+          "when": "explorerResourceIsFolder && resourceFilename != 'node_modules'",
+          "command": "node-workspace-builder.buildProject",
+          "group": "nwbgroup@2"
+        },
+        {
+          "when": "resourceFilename == 'package.json'",
+          "command": "node-workspace-builder.cleanProject",
+          "group": "nwbgroup@3"
+        },
+        {
+          "when": "explorerResourceIsFolder && resourceFilename != 'node_modules'",
+          "command": "node-workspace-builder.cleanProject",
+          "group": "nwbgroup@3"
+        }
+      ]
     },
-    "devDependencies": {
-        "@types/copy-paste": "^1.1.30",
-        "@types/mocha": "^2.2.42",
-        "@types/node": "latest",
-        "@types/semver": "^6.0.1",
-        "tslint": "^5.18.0",
-        "typescript": "^3.5.3",
-        "vscode": "^1.1.35"
-    },
-    "dependencies": {
-        "copy-paste": "^1.3.0",
-        "npm": "latest",
-        "semver": "^6.2.0"
-    }
+    "keybindings": [{
+        "command": "node-workspace-builder.buildWorkspace",
+        "key": "ctrl+alt+b"
+      },
+      {
+        "command": "node-workspace-builder.cleanWorkspace",
+        "key": "ctrl+alt+c"
+      },
+      {
+        "command": "node-workspace-builder.watchProject",
+        "key": "shift+alt+w",
+        "when": "resourceFilename == 'package.json'"
+      },
+      {
+        "command": "node-workspace-builder.watchProject",
+        "key": "shift+alt+w",
+        "when": "explorerResourceIsFolder && resourceFilename != 'node_modules'"
+      },
+      {
+        "command": "node-workspace-builder.buildProject",
+        "key": "shift+alt+b",
+        "when": "resourceFilename == 'package.json'"
+      },
+      {
+        "command": "node-workspace-builder.buildProject",
+        "key": "shift+alt+b",
+        "when": "explorerResourceIsFolder && resourceFilename != 'node_modules'"
+      },
+      {
+        "command": "node-workspace-builder.cleanProject",
+        "key": "shift+alt+c",
+        "when": "resourceFilename == 'package.json'"
+      },
+      {
+        "command": "node-workspace-builder.cleanProject",
+        "key": "shift+alt+c",
+        "when": "explorerResourceIsFolder && resourceFilename != 'node_modules'"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "postinstall": "node ./node_modules/vscode/bin/install",
+    "test": "npm run compile && node ./node_modules/vscode/bin/test"
+  },
+  "devDependencies": {
+    "@types/copy-paste": "^1.1.30",
+    "@types/mocha": "^2.2.42",
+    "@types/node": "latest",
+    "@types/semver": "^6.0.1",
+    "tslint": "^5.18.0",
+    "typescript": "^3.5.3",
+    "vscode": "^1.1.35"
+  },
+  "dependencies": {
+    "copy-paste": "^1.3.0",
+    "npm": "latest",
+    "semver": "^6.2.0"
+  }
 }

@@ -11,6 +11,7 @@ import CopyTask from './CopyTask';
  * @since 2019.04.30
  */
 export default class BuildTask {
+  public succeed?: boolean;
   public projects: string[];
   public tasks: Array<CopyTask>;
 

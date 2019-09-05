@@ -48,56 +48,92 @@ export default class Builder {
    * @param projects - project paths
    * @param tasks - copy file tasks
    */
-  private static npmBuild(projects: string[], tasks: Array<CopyTask>): Thenable<any> {
+  private static npmBuild(projects: string[], tasks: Array<CopyTask>): Promise<any> {
     const modules = distinct(tasks, 'modulePath');
     const maxListeners = npm.getMaxListeners();
-    return vscode.window.withProgress({
-      location: vscode.ProgressLocation.Notification,
-      title: 'Building workspace',
-      cancellable: false
-    }, (progress, token) => {
-      const npmPath = `${process.env.APPDATA}${sep}npm`;
-      let needInstallAll = false;
-      const task = NpmHelper.load(npmPath).then(() => {
-        let timeout: NodeJS.Timeout | null = null;
-        progress.report({ message: 'Installing project dependencies...' });
-        const promises = projects.map(projectPath => {
-          const executor: promise.PromiseExecutor<undefined> = (resolve, reject) => {
-            const packFile = `${projectPath}${PathConstants.PACK_JSON}`;
-            if (!FsHelper.exists(packFile)) {
-              return resolve();
+    return new Promise((resolve, reject) => {
+      vscode.window.withProgress({
+        location: vscode.ProgressLocation.Notification,
+        title: 'Building workspace',
+        cancellable: false
+      }, (progress, token) => {
+        const npmPath = `${process.env.APPDATA}${sep}npm`;
+        let needInstallAll = false;
+        const task = NpmHelper.load(npmPath).then(() => {
+          let timeout: NodeJS.Timeout | null = null;
+          progress.report({ message: 'Installing project dependencies...' });
+          const promises = projects.map(projectPath => {
+            const executor: promise.PromiseExecutor<undefined> = (resolve, reject) => {
+              const packFile = `${projectPath}${PathConstants.PACK_JSON}`;
+              if (!FsHelper.exists(packFile)) {
+                return resolve();
+              }
+              if (FsHelper.isDirectory(`${projectPath}${PathConstants.NODE_MODULES}`)) {
+                const pkg: Package = require(packFile);
+                const dependencies = [
+                  ...PackReader.readDeps(pkg.dependencies),
+                  ...PackReader.readDeps(pkg.devDependencies)
+                ];
+                const depsToUpdateOrInstall = dependencies.filter(dep => {
+                  const depPath = `${projectPath}${PathConstants.NODE_MODULES}${sep}${dep.name}${sep}`;
+                  if (tasks.map(task => task.projectDepPath).includes(depPath)) {
+                    // modules to build locally
+                    return false;
+                  }
+                  if (!FsHelper.exists(depPath) || !FsHelper.isDirectory(depPath) || !FsHelper.exists(`${depPath}${PathConstants.PACK_JSON}`)) {
+                    // modules not found
+                    return true;
+                  }
+                  const depPkg: Package = require(`${depPath}${PathConstants.PACK_JSON}`);
+                  console.log(`${dep.name}.version: ${dep.version}, existing ${dep.name}.version: ${depPkg.version}, semver.satisfies: ${semver.satisfies(depPkg.version, dep.version)}`);
+                  return !semver.satisfies(depPkg.version, dep.version);
+                }).map(dep => {
+                  return `${dep.name}@${dep.version}`;
+                });
+                depsToUpdateOrInstall.length > 0
+                  ? NpmHelper.install(projectPath, depsToUpdateOrInstall).then(() => {
+                    resolve();
+                  }).catch(reject) : resolve();
+              } else {
+                needInstallAll = true;
+                Builder.output.log(`Start installing: ${projectPath}`);
+                NpmHelper.install(projectPath).then(() => {
+                  const pathArr = projectPath.split(sep);
+                  const projectName = pathArr[pathArr.length - 2];
+                  progress.report({ message: `Installing success: ${projectName}` });
+                  if (timeout === null) {
+                    resolve();
+                  } else {
+                    clearTimeout(timeout);
+                    timeout = null;
+                    resolve();
+                  }
+                  timeout = setTimeout(() => {
+                    progress.report({ message: 'Installing project dependencies...' });
+                  }, 5 * 1000);
+                }).catch(reject);
+              }
+            };
+            return executor;
+          });
+          return promise.batch(promises, maxListeners).then(() => {
+            if (timeout !== null) {
+              clearTimeout(timeout);
+              timeout = null;
             }
-            if (FsHelper.isDirectory(`${projectPath}${PathConstants.NODE_MODULES}`)) {
-              const pkg: Package = require(packFile);
-              const dependencies = [
-                ...PackReader.readDeps(pkg.dependencies),
-                ...PackReader.readDeps(pkg.devDependencies)
-              ];
-              const depsToUpdateOrInstall = dependencies.filter(dep => {
-                const depPath = `${projectPath}${PathConstants.NODE_MODULES}${sep}${dep.name}${sep}`;
-                if (tasks.map(task => task.projectDepPath).includes(depPath)) {
-                  // modules to build locally
-                  return false;
-                }
-                if (!FsHelper.exists(depPath) || !FsHelper.isDirectory(depPath) || !FsHelper.exists(`${depPath}${PathConstants.PACK_JSON}`)) {
-                  // modules not found
-                  return true;
-                }
-                const depPkg: Package = require(`${depPath}${PathConstants.PACK_JSON}`);
-                console.log(`${dep.name}.version: ${dep.version}, existing ${dep.name}.version: ${depPkg.version}, semver.satisfies: ${semver.satisfies(depPkg.version, dep.version)}`);
-                return !semver.satisfies(depPkg.version, dep.version);
-              }).map(dep => {
-                return `${dep.name}@${dep.version}`;
-              });
-              depsToUpdateOrInstall.length > 0
-                ? NpmHelper.install(projectPath, depsToUpdateOrInstall).then(() => {
-                  resolve();
-                }).catch(reject) : resolve();
-            } else {
-              needInstallAll = true;
-              Builder.output.log(`Start installing: ${projectPath}`);
-              NpmHelper.install(projectPath).then(() => {
-                const pathArr = projectPath.split(sep);
+          });
+        }).then(() => {
+          let timeout: NodeJS.Timeout | null = null;
+          progress.report({ message: 'Installing module dependencies...' });
+          const installModules = modules.map((modulePath: string) => {
+            const executor: promise.PromiseExecutor<undefined> = (resolve, reject) => {
+              const needInstallDep = Configuration.buildModulesWithoutInstall() ? false
+                : !FsHelper.isDirectory(`${modulePath}${PathConstants.NODE_MODULES}`);
+              if (!needInstallDep) {
+                return resolve();
+              }
+              NpmHelper.install(modulePath).then(() => {
+                const pathArr = modulePath.split(sep);
                 const projectName = pathArr[pathArr.length - 2];
                 progress.report({ message: `Installing success: ${projectName}` });
                 if (timeout === null) {
@@ -108,138 +144,105 @@ export default class Builder {
                   resolve();
                 }
                 timeout = setTimeout(() => {
-                  progress.report({ message: 'Installing project dependencies...' });
+                  progress.report({ message: 'Installing module dependencies...' });
                 }, 5 * 1000);
               }).catch(reject);
-            }
-          };
-          return executor;
-        });
-        return promise.batch(promises, maxListeners).then(() => {
-          if (timeout !== null) {
-            clearTimeout(timeout);
-            timeout = null;
-          }
-        });
-      }).then(() => {
-        let timeout: NodeJS.Timeout | null = null;
-        progress.report({ message: 'Installing module dependencies...' });
-        const installModules = modules.map((modulePath: string) => {
-          const executor: promise.PromiseExecutor<undefined> = (resolve, reject) => {
-            const needInstallDep = Configuration.buildModulesWithoutInstall() ? false
-              : !FsHelper.isDirectory(`${modulePath}${PathConstants.NODE_MODULES}`);
-            if (!needInstallDep) {
-              return resolve();
-            }
-            NpmHelper.install(modulePath).then(() => {
-              const pathArr = modulePath.split(sep);
-              const projectName = pathArr[pathArr.length - 2];
-              progress.report({ message: `Installing success: ${projectName}` });
-              if (timeout === null) {
-                resolve();
-              } else {
-                clearTimeout(timeout);
-                timeout = null;
-                resolve();
-              }
-              timeout = setTimeout(() => {
-                progress.report({ message: 'Installing module dependencies...' });
-              }, 5 * 1000);
-            }).catch(reject);
-          };
-          return executor;
-        });
-        return promise.batch(installModules, maxListeners).then(() => {
-          if (timeout !== null) {
-            clearTimeout(timeout);
-            timeout = null;
-          }
-          const buildModules = modules.map((modulePath: string) => {
-            progress.report({ message: 'Building modules...' });
-            return NpmHelper.getBuildExecutor(modulePath);
+            };
+            return executor;
           });
-          return promise.batch(buildModules, maxListeners);
-        });
-      }).then(() => {
-        progress.report({ message: 'Building projects...' });
-        const promises = tasks.map((task: CopyTask) => {
-          const executor: promise.PromiseExecutor<undefined> = (resolve, reject) => {
-            Builder.output.log(`Start synchronizing: ${task.modulePath} -> ${task.projectDepPath}`);
-            const buildToProject = () => {
-              const pros = task.files.map(file => {
-                const executor: promise.PromiseExecutor<undefined> = (res, rej) => {
-                  if (!FsHelper.exists(task.projectDepPath) && !needInstallAll) {
-                    FsHelper.mkDir(task.projectDepPath, { recursive: true });
-                  }
-                  const targetPath = `${task.projectDepPath}${file}`;
-                  const srcPath = `${task.modulePath}${file}`;
-                  if (!FsHelper.exists(srcPath)) {
-                    console.log(`path: ${srcPath} is not built, try again after 500ms.`);
-                    setTimeout(() => {
-                      buildToProject().then(() => {
-                        res();
-                      }).catch((err: any) => {
-                        Builder.output.log(err);
-                        if (rej !== undefined) {
-                          rej(err);
-                        }
-                      });
-                    }, 500);
-                    return;
-                  }
-                  FsHelper.replace(srcPath, targetPath).then(() => {
-                    res();
-                  }).catch((err: any) => {
-                    Builder.output.log(err);
-                    if (rej !== undefined) {
-                      rej(err);
+          return promise.batch(installModules, maxListeners).then(() => {
+            if (timeout !== null) {
+              clearTimeout(timeout);
+              timeout = null;
+            }
+            const buildModules = modules.map((modulePath: string) => {
+              progress.report({ message: 'Building modules...' });
+              return NpmHelper.getBuildExecutor(modulePath);
+            });
+            return promise.batch(buildModules, maxListeners);
+          });
+        }).then(() => {
+          progress.report({ message: 'Building projects...' });
+          const promises = tasks.map((task: CopyTask) => {
+            const executor: promise.PromiseExecutor<undefined> = (resolve, reject) => {
+              Builder.output.log(`Start synchronizing: ${task.modulePath} -> ${task.projectDepPath}`);
+              const buildToProject = () => {
+                const pros = task.files.map(file => {
+                  const executor: promise.PromiseExecutor<undefined> = (res, rej) => {
+                    if (!FsHelper.exists(task.projectDepPath) && !needInstallAll) {
+                      FsHelper.mkDir(task.projectDepPath, { recursive: true });
                     }
-                  });
+                    const targetPath = `${task.projectDepPath}${file}`;
+                    const srcPath = `${task.modulePath}${file}`;
+                    if (!FsHelper.exists(srcPath)) {
+                      console.log(`path: ${srcPath} is not built, try again after 500ms.`);
+                      setTimeout(() => {
+                        buildToProject().then(() => {
+                          res();
+                        }).catch((err: any) => {
+                          Builder.output.log(err);
+                          if (rej !== undefined) {
+                            rej(err);
+                          }
+                        });
+                      }, 500);
+                      return;
+                    }
+                    FsHelper.replace(srcPath, targetPath).then(() => {
+                      res();
+                    }).catch((err: any) => {
+                      Builder.output.log(err);
+                      if (rej !== undefined) {
+                        rej(err);
+                      }
+                    });
+                  };
+                  return executor;
+                });
+                return promise.batch(pros, maxListeners);
+              };
+              buildToProject().then(() => {
+                Builder.output.log(`Synchronize succeed: ${task.modulePath}`);
+                resolve();
+              }).catch(reject);
+            };
+            return executor;
+          });
+          return promise.batch(promises, maxListeners).then(() => {
+            const removePromises = modules.reduce((result, modulePath) => {
+              progress.report({ message: 'Cleaning modules...' });
+              const task = tasks.find(f => f.modulePath === modulePath);
+              if (task === undefined) {
+                return result;
+              }
+              const files = task.files.map((file: string) => {
+                const executor: promise.PromiseExecutor<undefined> = (resolve, reject) => {
+                  const srcPath = `${task.modulePath}${file}`;
+                  if (FsHelper.exists(srcPath)) {
+                    FsHelper.rm(srcPath).then(() => {
+                      resolve();
+                    }).catch(reject);
+                  } else {
+                    resolve();
+                  }
                 };
                 return executor;
               });
-              return promise.batch(pros, maxListeners);
-            };
-            buildToProject().then(() => {
-              Builder.output.log(`Synchronize succeed: ${task.modulePath}`);
-              resolve();
-            }).catch(reject);
-          };
-          return executor;
+              return [...result, ...files];
+            }, []);
+            return promise.batch(removePromises, maxListeners);
+          });
+        }).then(() => {
+          Builder.output.log('Build tasks had been finished.');
+          resolve();
+        }).catch(err => {
+          Builder.building = false;
+          Builder.output.log(err);
+          progress.report({ increment: 100 });
+          reject(err);
         });
-        return promise.batch(promises, maxListeners).then(() => {
-          const removePromises = modules.reduce((result, modulePath) => {
-            progress.report({ message: 'Cleaning modules...' });
-            const task = tasks.find(f => f.modulePath === modulePath);
-            if (task === undefined) {
-              return result;
-            }
-            const files = task.files.map((file: string) => {
-              const executor: promise.PromiseExecutor<undefined> = (resolve, reject) => {
-                const srcPath = `${task.modulePath}${file}`;
-                if (FsHelper.exists(srcPath)) {
-                  FsHelper.rm(srcPath).then(() => {
-                    resolve();
-                  }).catch(reject);
-                } else {
-                  resolve();
-                }
-              };
-              return executor;
-            });
-            return [...result, ...files];
-          }, []);
-          return promise.batch(removePromises, maxListeners);
-        });
-      }).then(() => {
-        Builder.output.log('All build tasks had been finished.');
-      }).catch(err => {
-        Builder.building = false;
-        Builder.output.log(err);
-        progress.report({ increment: 100 });
-        Promise.reject(err);
+        return task;
       });
-      return task;
     });
   }
 
@@ -294,9 +297,17 @@ export default class Builder {
     const buildAll = (queue: Array<BuildTask>, index = 0) => {
       if (index < queue.length) {
         const task = queue[index];
-        Builder.npmBuild(task.projects, task.tasks).then(() => {
-          buildAll(queue, index + 1);
-        });
+        if (task.succeed === undefined) {
+          Builder.npmBuild(task.projects, task.tasks).then(() => {
+            task.succeed = true;
+            buildAll(queue, index + 1);
+          }).catch(() => {
+            task.succeed = false;
+          });
+        } else {
+          Builder.queue.splice(index, 1);
+          buildAll(Builder.queue, index);
+        }
       } else {
         Builder.queue = [];
         Builder.building = false;
@@ -306,7 +317,7 @@ export default class Builder {
       new Promise((resolve, reject) => {
         Builder.queue.push(new BuildTask(projects.filter(Builder.validPath), tasks.filter(Builder.validTask)));
         if (Builder.building) {
-          return reject(new Error('You currently have a build task running. Please wait until finished.'));
+          return reject(new Error('Currently have build tasks running. Will wait until finished all.'));
         }
         Builder.output.show();
         Builder.building = true;
