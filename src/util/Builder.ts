@@ -166,6 +166,7 @@ export default class Builder {
           const promises = tasks.map((task: CopyTask) => {
             const executor: promise.PromiseExecutor<undefined> = (resolve, reject) => {
               Builder.output.log(`Start synchronizing: ${task.modulePath} -> ${task.projectDepPath}`);
+              let i = 0;
               const buildToProject = () => {
                 const pros = task.files.map(file => {
                   const executor: promise.PromiseExecutor<undefined> = (res, rej) => {
@@ -174,10 +175,12 @@ export default class Builder {
                     }
                     const targetPath = `${task.projectDepPath}${file}`;
                     const srcPath = `${task.modulePath}${file}`;
-                    if (!FsHelper.exists(srcPath)) {
-                      console.log(`path: ${srcPath} is not built, try again after 500ms.`);
+                    if (!FsHelper.exists(srcPath) && i < 20) {
+                      console.log(`Path: ${srcPath} is not built, try again after 500ms.`);
                       setTimeout(() => {
+                        i++;
                         buildToProject().then(() => {
+                          i = 0;
                           res();
                         }).catch((err: any) => {
                           Builder.output.log(err);
@@ -187,6 +190,8 @@ export default class Builder {
                         });
                       }, 500);
                       return;
+                    } else {
+                      rej(new Error(`Path: ${srcPath} is not built after tried 20 times.`));
                     }
                     FsHelper.replace(srcPath, targetPath).then(() => {
                       res();
