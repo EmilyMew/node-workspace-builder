@@ -190,8 +190,10 @@ export default class Builder {
                         });
                       }, 500);
                       return;
-                    } else {
-                      rej(new Error(`Path: ${srcPath} is not built after tried 20 times.`));
+                    } else if (!FsHelper.exists(srcPath) && i >= 20) {
+                      if (rej !== undefined) {
+                        rej(new Error(`Path: ${srcPath} is not built after tried 20 times.`));
+                      }
                     }
                     FsHelper.replace(srcPath, targetPath).then(() => {
                       res();

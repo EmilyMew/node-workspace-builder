@@ -2,6 +2,10 @@
 
 All notable changes to the "Node Workspace Builder" extension will be documented in this file.
 
+## 0.2.4
+- `Changed` Updated engine version to 1.41.0.
+- `Fixed` File system watcher ignored building result file changes now.
+
 ## 0.2.3
 - `Fixed` Progress bar didn't disappear on build errors.
 

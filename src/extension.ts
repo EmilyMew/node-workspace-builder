@@ -16,6 +16,7 @@ import OutputManager from './util/OutPutManager';
 import Builder from './util/Builder';
 import FsHelper from './util/FsHelper';
 import Configuration from './util/Configuration';
+import Pack from './model/Pack';
 
 let placeholder = PathConstants.PLACEHOLDER;
 
@@ -192,23 +193,30 @@ export function activate(context: vscode.ExtensionContext) {
 
 	const fileEventHandler = (fileName: string) => {
 		const tasks = new Array<CopyTask>();
-		const ignored = fileName.indexOf(PathConstants.PACK_LOCK_JSON) >= 0
-			|| fileName.indexOf(PathConstants.NODE_MODULES) >= 0
-			|| fileName.indexOf(PathConstants.PLACEHOLDER) >= 0
-			|| fileName.indexOf(PathConstants.PLACEHOLDER_OLD) >= 0;
+		let ignored = fileName.includes(PathConstants.PACK_LOCK_JSON)
+			|| fileName.includes(PathConstants.NODE_MODULES)
+			|| fileName.includes(PathConstants.PLACEHOLDER)
+			|| fileName.includes(PathConstants.PLACEHOLDER_OLD);
+		let isBuildResultChange = false;
+		packReader.packMap.forEach((pack: Pack, key: string) => {
+			if (fileName.includes(pack.path.replace(PathConstants.PACK_JSON, ''))) {
+				isBuildResultChange = pack.files.some(f => fileName.includes(`${sep}${f}`));
+			}
+		});
+		ignored = ignored || isBuildResultChange;
 		if (Configuration.autoBuildOnSave() && !ignored) {
 			let needRebuild = false;
 			let needReprepare = false;
 			for (let i = 0; i < packReader.watchPaths.length; i++) {
 				let watchPath = packReader.watchPaths[i];
-				needReprepare = fileName.indexOf(PathConstants.PACK_JSON) >= 0;
+				needReprepare = fileName.includes(PathConstants.PACK_JSON);
 				if (needReprepare) {
 					needRebuild = true;
 					break;
 				} else {
-					needRebuild = fileName.indexOf(watchPath) >= 0;
+					needRebuild = fileName.includes(watchPath);
 					if (needRebuild) {
-						tasks.splice(0, tasks.length, ...packReader.tasks.filter(f => fileName.indexOf(f.modulePath) >= 0));
+						tasks.splice(0, tasks.length, ...packReader.tasks.filter(f => fileName.includes(f.modulePath)));
 						break;
 					}
 				}
@@ -220,16 +228,18 @@ export function activate(context: vscode.ExtensionContext) {
 			}
 		}
 	};
-
-	const fileSystemWatcher = vscode.workspace.createFileSystemWatcher('');
+	const fileSystemWatcher = vscode.workspace.createFileSystemWatcher('**/*.*');
 
 	fileSystemWatcher.onDidChange(e => {
+		console.log('File changed on disk: ' + e.fsPath);
 		fileEventHandler(e.fsPath);
 	});
 	fileSystemWatcher.onDidCreate(e => {
+		console.log('File created on disk: ' + e.fsPath);
 		fileEventHandler(e.fsPath);
 	});
 	fileSystemWatcher.onDidDelete(e => {
+		console.log('File deleted on disk: ' + e.fsPath);
 		fileEventHandler(e.fsPath);
 	});
 
