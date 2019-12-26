@@ -2,6 +2,9 @@
 
 All notable changes to the "Node Workspace Builder" extension will be documented in this file.
 
+## 0.2.5
+- `Fixed` File system watcher ignored source control config files.
+
 ## 0.2.4
 - `Changed` Updated engine version to 1.41.0.
 - `Fixed` File system watcher ignored building result file changes now.

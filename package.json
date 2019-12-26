@@ -2,7 +2,7 @@
   "name": "node-workspace-builder",
   "displayName": "Node Workspace Builder",
   "description": "This extension helps you to sync your source code to projects' dependencies folders which depends on it automatically. ",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "author": "Emily Wang <Emily36107@outlook.com>",
   "publisher": "EmilyWang",
   "repository": {

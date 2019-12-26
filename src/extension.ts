@@ -193,35 +193,43 @@ export function activate(context: vscode.ExtensionContext) {
 
 	const fileEventHandler = (fileName: string) => {
 		const tasks = new Array<CopyTask>();
-		let ignored = fileName.includes(PathConstants.PACK_LOCK_JSON)
-			|| fileName.includes(PathConstants.NODE_MODULES)
-			|| fileName.includes(PathConstants.PLACEHOLDER)
-			|| fileName.includes(PathConstants.PLACEHOLDER_OLD);
+		let ignored = fileName.includes(`${sep}${PathConstants.PACK_LOCK_JSON}`)
+			|| fileName.includes(`${sep}${PathConstants.NODE_MODULES}`)
+			|| fileName.includes(`${sep}${PathConstants.PLACEHOLDER}`)
+			|| fileName.includes(`${sep}${PathConstants.GIT}`)
+			|| fileName.endsWith(PathConstants.GIT)
+			|| fileName.includes(`${sep}${PathConstants.SVN}`)
+			|| fileName.includes(`${sep}${PathConstants.PLACEHOLDER_OLD}`);
 		let isBuildResultChange = false;
 		packReader.packMap.forEach((pack: Pack, key: string) => {
 			if (fileName.includes(pack.path.replace(PathConstants.PACK_JSON, ''))) {
-				isBuildResultChange = pack.files.some(f => fileName.includes(`${sep}${f}`));
+				isBuildResultChange = pack.files.some(f => f !== PathConstants.PACK_JSON && fileName.includes(`${sep}${f}`));
+				if (isBuildResultChange) {
+					console.log('NPM build result files changed. need no repreparing and building.');
+				}
 			}
 		});
 		ignored = ignored || isBuildResultChange;
 		if (Configuration.autoBuildOnSave() && !ignored) {
 			let needRebuild = false;
 			let needReprepare = false;
-			for (let i = 0; i < packReader.watchPaths.length; i++) {
-				let watchPath = packReader.watchPaths[i];
-				needReprepare = fileName.includes(PathConstants.PACK_JSON);
-				if (needReprepare) {
-					needRebuild = true;
-					break;
-				} else {
-					needRebuild = fileName.includes(watchPath);
-					if (needRebuild) {
+			needReprepare = fileName.endsWith(PathConstants.PACK_JSON);
+
+			if (needReprepare) {
+				console.log('NPM package config file changed. Need repreparing and building.');
+				needRebuild = true;
+			} else {
+				for (let i = 0; i < packReader.watchPaths.length; i++) {
+					const watchPath = packReader.watchPaths[i];
+					if (fileName.includes(watchPath)) {
+						needRebuild = true;
 						tasks.splice(0, tasks.length, ...packReader.tasks.filter(f => fileName.includes(f.modulePath)));
 						break;
 					}
 				}
 			}
 			if (needRebuild) {
+				console.log('Need some building operations.');
 				needReprepare ? packReader.prepare(folders, placeholder).then(() => {
 					Builder.build(packReader);
 				}) : Builder.build(packReader, tasks);
@@ -243,10 +251,11 @@ export function activate(context: vscode.ExtensionContext) {
 		fileEventHandler(e.fsPath);
 	});
 
+	/*
 	vscode.workspace.onDidSaveTextDocument((e: vscode.TextDocument) => {
 		fileEventHandler(e.fileName);
 	});
-
+	*/
 	vscode.workspace.onDidChangeWorkspaceFolders(() => {
 		const changedFolders = vscode.workspace.workspaceFolders === undefined ? [] : vscode.workspace.workspaceFolders.map(folder => folder.uri.fsPath);
 		if (Configuration.autoBuildOnFoldersChanged()) {
