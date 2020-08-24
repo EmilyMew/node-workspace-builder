@@ -2,6 +2,9 @@
 
 All notable changes to the "Node Workspace Builder" extension will be documented in this file.
 
+## 0.2.6
+- `Changed` Updated engine version. Tuned PackageReader.
+
 ## 0.2.5
 - `Fixed` File system watcher ignored source control config files.
 
