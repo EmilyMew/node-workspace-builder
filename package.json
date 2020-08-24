@@ -63,7 +63,8 @@
         }
       }
     },
-    "commands": [{
+    "commands": [
+      {
         "command": "node-workspace-builder.buildWorkspace",
         "title": "Build entire workspace"
       },
@@ -85,7 +86,8 @@
       }
     ],
     "menus": {
-      "explorer/context": [{
+      "explorer/context": [
+        {
           "when": "resourceFilename == 'package.json'",
           "command": "node-workspace-builder.watchProject",
           "group": "nwbgroup@1"
@@ -117,7 +119,8 @@
         }
       ]
     },
-    "keybindings": [{
+    "keybindings": [
+      {
         "command": "node-workspace-builder.buildWorkspace",
         "key": "ctrl+alt+b"
       },
@@ -165,18 +168,18 @@
   },
   "devDependencies": {
     "@types/copy-paste": "^1.1.30",
-    "@types/glob": "^7.1.1",
+    "@types/glob": "^7.1.3",
     "@types/mocha": "^2.2.42",
-    "@types/node": "latest",
-    "@types/semver": "^6.0.1",
-    "@types/vscode": "^1.41.0",
+    "@types/node": "^13.13.15",
+    "@types/semver": "^6.2.1",
+    "@types/vscode": "^1.48.0",
     "tslint": "^5.18.0",
-    "typescript": "^3.5.3",
-    "vscode-test": "^1.3.0"
+    "typescript": "^3.9.7",
+    "vscode-test": "^1.4.0"
   },
   "dependencies": {
     "copy-paste": "^1.3.0",
-    "npm": "latest",
+    "npm": "^6.14.8",
     "semver": "^6.2.0"
   }
 }

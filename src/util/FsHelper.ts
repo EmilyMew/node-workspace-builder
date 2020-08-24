@@ -83,8 +83,9 @@ export default class FsHelper {
    * @param options Either the file mode, or an object optionally specifying the file mode and whether parent folders
    * should be created. If a string is passed, it is parsed as an octal integer. If not specified, defaults to `0o777`.
    */
-  static mkDir(src: string, options?: any): void {
-    fs.mkdirSync(src, options);
+  static mkDir(path: string, options?: any): void {
+    FsHelper.output.log(`Make directory: ${path}`);
+    fs.mkdirSync(path, options);
   }
 
 

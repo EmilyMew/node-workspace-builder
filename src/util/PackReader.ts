@@ -5,29 +5,53 @@
 import { sep } from 'path';
 import * as semver from 'semver';
 
+import distinct from './Distinct';
+import * as promise from '../mixins/Promise';
 import FsHelper from './FsHelper';
 import Dep from '../model/Dep';
 import Pack from '../model/Pack';
 import CopyTask from '../model/CopyTask';
 import PathConstants from '../constant/PathConstants';
 
-const getAllPackDeps = (pack: Pack, packMap: Map<string, Pack>, projectPack: Pack): Array<CopyTask> => {
-  const taskQueue = new Array<CopyTask>();
-  pack.dependencies.forEach((dep: Dep) => {
-    const depPack = packMap.get(dep.name);
-    if (depPack === undefined || depPack === null) {
-      return taskQueue;
-    }
-    if (semver.satisfies(depPack.version, dep.version)) {
-      const targetPath = projectPack.path.replace(PathConstants.PACK_JSON, `${PathConstants.NODE_MODULES}${sep}${dep.name}${sep}`);
-      const srcPath = depPack.path.replace(PathConstants.PACK_JSON, '');
-      const task = new CopyTask(targetPath, srcPath, depPack.files);
-      taskQueue.push(task);
-    }
-    taskQueue.splice(0, 0, ...getAllPackDeps(depPack, packMap, projectPack).filter(f => taskQueue.find(f1 => f.modulePath === f1.modulePath) === undefined || taskQueue.find(f1 => f.modulePath === f1.modulePath) === null));
-  });
-  return taskQueue;
+const distinctDeps = (deps: Dep[], packMap: Map<string, Pack>): Array<Dep> => {
+  return distinct(new Array<Dep>().concat(...deps).filter(f => {
+    const result = packMap.has(f.name);
+    const pack = packMap.get(f.name);
+    return result && pack !== null && pack !== undefined && semver.satisfies(pack.version, f.version);
+  }), 'name').map(m => {
+    const pack = packMap.get(m);
+    return pack ? new Dep(m, pack.version) : new Dep('', '');
+  }).filter(f => f.name !== '' && f.version !== '');
+};
 
+const getAllPackDeps = (deps: Dep[], packMap: Map<string, Pack>, projectPack: Pack): Array<CopyTask> => {
+  const nextPackNames = new Array<string>();
+
+  const taskQueue: Array<CopyTask> = distinctDeps(deps, packMap).map((dep: Dep) => {
+    const depPack = packMap.get(dep.name);
+    if (depPack === null || depPack === undefined || !semver.satisfies(depPack.version, dep.version)) {
+      return new CopyTask('', '', []);
+    }
+    const targetPath = projectPack.path.replace(PathConstants.PACK_JSON, `${PathConstants.NODE_MODULES}${sep}${dep.name}${sep}`);
+    const srcPath = depPack.path.replace(PathConstants.PACK_JSON, '');
+    nextPackNames.push(dep.name);
+    return new CopyTask(targetPath, srcPath, depPack.files);
+  }).filter(f => f.projectDepPath !== '' && f.modulePath !== '');
+  const deepDeps = nextPackNames.map((name) => {
+    const pack = packMap.get(name);
+    return pack ? pack.dependencies : [];
+  });
+
+  const isNewTask = (packName: string) => {
+    return !taskQueue.map(m => m.modulePath).some(f1 => f1.includes(packName));
+  };
+  const nextLevelDeps = distinctDeps(new Array<Dep>().concat(...deepDeps), packMap).filter(f => isNewTask(f.name));
+
+  if (nextLevelDeps.length > 0) {
+    const nextLevelQueue = getAllPackDeps(nextLevelDeps, packMap, projectPack);
+    taskQueue.splice(taskQueue.length, 0, ...nextLevelQueue);
+  }
+  return taskQueue;
 };
 
 const scan = async (root: string, matches: string, ignores: string[] = []): Promise<string[]> => {
@@ -77,8 +101,8 @@ export default class PackReader {
   prepare(roots: string[], placeholder: string = PathConstants.PLACEHOLDER): Promise<unknown[]> {
     this.watchPaths = [];
     this.projects = [];
-    const promises = roots.map(root => {
-      return new Promise((resolve) => {
+    const promises: promise.PromiseExecutor<unknown[]>[] = roots.map(root => {
+      const executor: promise.PromiseExecutor<unknown[]> = (resolve: () => void) => {
         if (root === undefined || root === null) {
           resolve();
         } else {
@@ -98,11 +122,11 @@ export default class PackReader {
                 this.packMap.set(pack.name, new Pack(filePath, watch, pack.version, pack.files, dependencies));
               });
               const taskQueue = new Array<CopyTask>();
-              this.packMap.forEach((value: Pack, key: string) => {
-                if (!value.watch) {
+              this.packMap.forEach((pack: Pack, key: string) => {
+                if (!pack.watch) {
                   return;
                 }
-                taskQueue.splice(taskQueue.length, 0, ...getAllPackDeps(value, this.packMap, value));
+                taskQueue.splice(taskQueue.length, 0, ...getAllPackDeps(pack.dependencies, this.packMap, pack));
               });
               this.watchPaths.splice(0, this.watchPaths.length, PathConstants.PACK_JSON, ...taskQueue.map((task: CopyTask) => {
                 return task.modulePath;
@@ -112,9 +136,10 @@ export default class PackReader {
             });
           });
         }
-      });
+      };
+      return executor;
     });
-    return Promise.all(promises);
+    return promise.queue(...promises);
   }
 
   /**

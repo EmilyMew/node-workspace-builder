@@ -37,13 +37,13 @@ export function activate(context: vscode.ExtensionContext) {
 
 	// Use the console to output diagnostic information (console.log) and errors (console.error)
 	// This line of code will only be executed once when your extension is activated
-	console.log('Congratulations, your extension "node-workspace-builder" is now active!');
 
 	vscode.workspace.findFiles(`**/${PathConstants.PLACEHOLDER_OLD}`).then(value => {
 		placeholder = value.length > 0 ? PathConstants.PLACEHOLDER_OLD : PathConstants.PLACEHOLDER;
 	}).then(() => {
 		return packReader.prepare(folders, placeholder);
 	}).then(() => {
+		console.log('Congratulations, your extension "node-workspace-builder" is now active!');
 		if (Configuration.autoBuildOnStartUp()) {
 			console.log('Initial build at start up.');
 			Builder.build(packReader);
@@ -51,12 +51,14 @@ export function activate(context: vscode.ExtensionContext) {
 	});
 
 	const build = vscode.commands.registerCommand('node-workspace-builder.buildWorkspace', () => {
+		console.log('Build workspace');
 		packReader.prepare(folders, placeholder).then(() => {
 			Builder.build(packReader);
 		});
 	});
 
 	const clean = vscode.commands.registerCommand('node-workspace-builder.cleanWorkspace', () => {
+		console.log('Clean workspace');
 		vscode.window.withProgress({
 			location: vscode.ProgressLocation.Notification,
 			title: 'Cleaning workspace',
@@ -71,6 +73,7 @@ export function activate(context: vscode.ExtensionContext) {
 	});
 
 	const watch = vscode.commands.registerCommand('node-workspace-builder.watchProject', (uri: vscode.Uri) => {
+		console.log('Watch project:', uri.path);
 		new Promise<Array<vscode.Uri>>((resolve, reject) => {
 			if (uri === undefined) {
 				vscode.commands.executeCommand('copyFilePath').then(value => {
@@ -156,6 +159,7 @@ export function activate(context: vscode.ExtensionContext) {
 	};
 
 	const buildProject = vscode.commands.registerCommand('node-workspace-builder.buildProject', (uri) => {
+		console.log('Build project:', uri.path);
 		getWatchedProjects(uri).then((files: string[]) => {
 			const tasks = new Array<CopyTask>();
 			files.forEach(file => {
@@ -168,6 +172,7 @@ export function activate(context: vscode.ExtensionContext) {
 	});
 
 	const cleanProject = vscode.commands.registerCommand('node-workspace-builder.cleanProject', (uri) => {
+		console.log('Clean project:', uri.path);
 		getWatchedProjects(uri).then((files: string[]) => {
 			vscode.window.withProgress({
 				location: vscode.ProgressLocation.Notification,
@@ -192,6 +197,7 @@ export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(cleanProject);
 
 	const fileEventHandler = (fileName: string) => {
+		console.log('Handling file change.');
 		const tasks = new Array<CopyTask>();
 		let ignored = fileName.includes(`${sep}${PathConstants.PACK_LOCK_JSON}`)
 			|| fileName.includes(`${sep}${PathConstants.NODE_MODULES}`)
@@ -200,10 +206,13 @@ export function activate(context: vscode.ExtensionContext) {
 			|| fileName.endsWith(PathConstants.GIT)
 			|| fileName.includes(`${sep}${PathConstants.SVN}`)
 			|| fileName.includes(`${sep}${PathConstants.PLACEHOLDER_OLD}`);
+		if (ignored) {
+			console.log('Ignored files changed. need no repreparing and building.');
+		}
 		let isBuildResultChange = false;
 		packReader.packMap.forEach((pack: Pack, key: string) => {
 			if (fileName.includes(pack.path.replace(PathConstants.PACK_JSON, ''))) {
-				isBuildResultChange = pack.files.some(f => f !== PathConstants.PACK_JSON && fileName.includes(`${sep}${f}`));
+				isBuildResultChange = !pack.files || pack.files.some(f => f !== PathConstants.PACK_JSON && fileName.includes(`${sep}${f}`));
 				if (isBuildResultChange) {
 					console.log('NPM build result files changed. need no repreparing and building.');
 				}
