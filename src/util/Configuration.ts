@@ -60,7 +60,7 @@ export default class Configuration {
      */
     public static buildModulesWithoutInstall(): boolean {
         const configuration = workspace.getConfiguration(DEFAULT_SECTION_NAME);
-        return <boolean>configuration.get(Configuration.AUTO_BUILD_ON_FOLDERS_CHANGED);
+        return <boolean>configuration.get(Configuration.BUILD_MODULES_WITHOUT_INSTALL);
     }
 
     /**

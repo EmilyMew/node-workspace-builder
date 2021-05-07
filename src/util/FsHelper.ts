@@ -36,6 +36,17 @@ export default class FsHelper {
   }
 
   /**
+   * returns a directory is empty
+   * 
+   * @param src file path
+   * @returns 
+   */
+  static isEmptyDir(src: string): boolean {
+    const files = fs.readdirSync(src);
+    return files === null || files === undefined || files.length === 0;
+  }
+
+  /**
    * read directory info
    * 
    * @param src directory path
@@ -114,13 +125,13 @@ export default class FsHelper {
   static rm(src: string) {
     return new Promise<string[] | undefined>((resolve, reject) => {
       if (!FsHelper.exists(src)) {
-        return resolve();
+        return resolve(undefined);
       }
       const stats = fs.statSync(src);
       if (stats.isFile() || stats.isSymbolicLink()) {
         FsHelper.output.log(`Delete file: ${src}`);
         fs.unlink(src, err => {
-          err ? reject(err) : resolve();
+          err ? reject(err) : resolve(undefined);
         });
       } else if (stats.isDirectory()) {
         resolve(fs.readdirSync(src));
@@ -131,7 +142,7 @@ export default class FsHelper {
           const _src = `${src}${sep}${p}`;
           return new Promise((res, rej) => {
             FsHelper.rm(_src).then(() => {
-              res();
+              res(undefined);
             }).catch(rej);
           });
         });
@@ -139,7 +150,7 @@ export default class FsHelper {
           return Promise.all(promises).then(() => {
             setTimeout(() => {
               fs.rmdir(src, (err => {
-                err ? reject(err) : resolve();
+                err ? reject(err) : resolve(undefined);
               }));
             }, 200);
           }).catch(reject);
@@ -169,7 +180,7 @@ export default class FsHelper {
           let readable = fs.createReadStream(src);
           let writable = fs.createWriteStream(dst);
           readable.pipe(writable);
-          return resolve();
+          return resolve(undefined);
         } else if (stats.isDirectory()) {
           const paths = fs.readdirSync(src);
           if (fs.existsSync(dst)) {
@@ -188,7 +199,7 @@ export default class FsHelper {
           const _dst = `${dst}${sep}${p}`;
           return new Promise((resolve, reject) => {
             FsHelper.copy(_src, _dst).then(() => {
-              resolve();
+              resolve(undefined);
             }).catch(reject);
           });
         });
@@ -217,7 +228,7 @@ export default class FsHelper {
           let readable = fs.createReadStream(src);
           let writable = fs.createWriteStream(dst);
           readable.pipe(writable);
-          return resolve();
+          return resolve(undefined);
         } else if (stats.isDirectory()) {
           const srcPaths = fs.readdirSync(src);
           if (fs.existsSync(dst)) {
@@ -241,7 +252,7 @@ export default class FsHelper {
           const _dst = `${dst}${sep}${p}`;
           return new Promise((resolve, reject) => {
             FsHelper.replace(_src, _dst).then(() => {
-              resolve();
+              resolve(undefined);
             }).catch(reject);
           });
         });

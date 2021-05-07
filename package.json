@@ -2,7 +2,7 @@
   "name": "node-workspace-builder",
   "displayName": "Node Workspace Builder",
   "description": "This extension helps you to sync your source code to projects' dependencies folders which depends on it automatically. ",
-  "version": "0.2.6",
+  "version": "0.2.7",
   "author": "Emily Wang <Emily36107@outlook.com>",
   "publisher": "EmilyWang",
   "repository": {
@@ -10,7 +10,7 @@
     "url": "https://github.com/EmilyMew/node-workspace-builder.git"
   },
   "engines": {
-    "vscode": "^1.48.0"
+    "vscode": "^1.56.0"
   },
   "categories": [
     "Other"
@@ -63,7 +63,8 @@
         }
       }
     },
-    "commands": [{
+    "commands": [
+      {
         "command": "node-workspace-builder.buildWorkspace",
         "title": "Build entire workspace"
       },
@@ -85,7 +86,8 @@
       }
     ],
     "menus": {
-      "explorer/context": [{
+      "explorer/context": [
+        {
           "when": "resourceFilename == 'package.json'",
           "command": "node-workspace-builder.watchProject",
           "group": "nwbgroup@1"
@@ -104,20 +106,11 @@
           "when": "explorerResourceIsFolder && resourceFilename != 'node_modules'",
           "command": "node-workspace-builder.buildProject",
           "group": "nwbgroup@2"
-        },
-        {
-          "when": "resourceFilename == 'package.json'",
-          "command": "node-workspace-builder.cleanProject",
-          "group": "nwbgroup@3"
-        },
-        {
-          "when": "explorerResourceIsFolder && resourceFilename != 'node_modules'",
-          "command": "node-workspace-builder.cleanProject",
-          "group": "nwbgroup@3"
         }
       ]
     },
-    "keybindings": [{
+    "keybindings": [
+      {
         "command": "node-workspace-builder.buildWorkspace",
         "key": "ctrl+alt+b"
       },
@@ -169,7 +162,7 @@
     "@types/mocha": "^2.2.42",
     "@types/node": "^13.13.15",
     "@types/semver": "^6.2.1",
-    "@types/vscode": "^1.48.0",
+    "@types/vscode": "^1.56.0",
     "tslint": "^5.18.0",
     "typescript": "^3.9.7",
     "vscode-test": "^1.4.0"

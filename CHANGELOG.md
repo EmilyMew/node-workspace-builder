@@ -2,6 +2,13 @@
 
 All notable changes to the "Node Workspace Builder" extension will be documented in this file.
 
+## 0.2.7
+- `Fixed` The configuration `node-workspace-builder.buildModulesWithoutInstall` is now effective.
+- `Changed` The `node_modules` folder will not be removed on cleaning.
+- `Changed` Reading packages will ignore recursive dependencies now.
+- `Changed` Updated engine version.
+- `Removed` Removed `Clean This Project` menu from the context menu.
+
 ## 0.2.6
 - `Changed` Updated engine version. Tuned PackageReader.
 

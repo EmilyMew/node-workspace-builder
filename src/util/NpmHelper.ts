@@ -23,7 +23,7 @@ export default class NpmHelper {
    */
   static load(prefix: string): Promise<unknown> {
     return new Promise((resolve, reject) => {
-      npm.load({ prefix }, err => err ? reject(err) : resolve());
+      npm.load({ prefix }, err => err ? reject(err) : resolve(null));
     });
   }
 
@@ -44,7 +44,7 @@ export default class NpmHelper {
           console.log(err);
           reject(new Error(`Install failed: ${projectName}`));
         } else {
-          resolve();
+          resolve(null);
         }
       });
     });
@@ -69,9 +69,11 @@ export default class NpmHelper {
         if (FsHelper.exists(`${path}${PathConstants.PACK_LOCK_JSON}`)) {
           promises.push(FsHelper.rm(`${path}${PathConstants.PACK_LOCK_JSON}`));
         }
+        /*
         if (FsHelper.exists(`${path}${PathConstants.NODE_MODULES}`)) {
           promises.push(FsHelper.rm(`${path}${PathConstants.NODE_MODULES}`));
         }
+        */
         Promise.all(promises).then(() => {
           resolve();
         });

@@ -68,14 +68,15 @@ export default class Builder {
               if (!FsHelper.exists(packFile)) {
                 return resolve();
               }
-              if (FsHelper.isDirectory(`${projectPath}${PathConstants.NODE_MODULES}`)) {
+              const projectNodeModules = `${projectPath}${PathConstants.NODE_MODULES}`;
+              if (FsHelper.isDirectory(projectNodeModules) && !FsHelper.isEmptyDir(projectNodeModules)) {
                 const pkg: Package = require(packFile);
                 const dependencies = [
                   ...PackReader.readDeps(pkg.dependencies),
                   ...PackReader.readDeps(pkg.devDependencies)
                 ];
                 const depsToUpdateOrInstall = dependencies.filter(dep => {
-                  const depPath = `${projectPath}${PathConstants.NODE_MODULES}${sep}${dep.name}${sep}`;
+                  const depPath = `${projectNodeModules}${sep}${dep.name}${sep}`;
                   if (tasks.map(task => task.projectDepPath).includes(depPath)) {
                     // modules to build locally
                     return false;
@@ -125,10 +126,10 @@ export default class Builder {
         }).then(() => {
           let timeout: NodeJS.Timeout | null = null;
           progress.report({ message: 'Installing module dependencies...' });
+          console.log(`Configuration.buildModulesWithoutInstall():${Configuration.buildModulesWithoutInstall()}`);
           const installModules = modules.map((modulePath: string) => {
             const executor: promise.PromiseExecutor<undefined> = (resolve, reject) => {
-              const needInstallDep = Configuration.buildModulesWithoutInstall() ? false
-                : !FsHelper.isDirectory(`${modulePath}${PathConstants.NODE_MODULES}`);
+              const needInstallDep = !Configuration.buildModulesWithoutInstall();
               if (!needInstallDep) {
                 return resolve();
               }
@@ -241,7 +242,7 @@ export default class Builder {
           });
         }).then(() => {
           Builder.output.log('Build tasks had been finished.');
-          resolve();
+          resolve(null);
         }).catch(err => {
           Builder.building = false;
           Builder.output.log(err);
@@ -328,7 +329,7 @@ export default class Builder {
         }
         Builder.output.show();
         Builder.building = true;
-        return resolve();
+        return resolve(null);
       }).then(() => {
         buildAll(Builder.queue);
       }).catch(err => {

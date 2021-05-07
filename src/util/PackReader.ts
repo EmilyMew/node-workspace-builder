@@ -20,7 +20,10 @@ const distinctDeps = (deps: Dep[], packMap: Map<string, Pack>): Array<Dep> => {
     return result && pack !== null && pack !== undefined && semver.satisfies(pack.version, f.version);
   }), 'name').map(m => {
     const pack = packMap.get(m);
-    return pack ? new Dep(m, pack.version) : new Dep('', '');
+    if (pack === null || pack === undefined) {
+      return new Dep('', '');
+    }
+    return new Dep(m, pack.version);
   }).filter(f => f.name !== '' && f.version !== '');
 };
 
@@ -39,17 +42,19 @@ const getAllPackDeps = (deps: Dep[], packMap: Map<string, Pack>, projectPack: Pa
   }).filter(f => f.projectDepPath !== '' && f.modulePath !== '');
   const deepDeps = nextPackNames.map((name) => {
     const pack = packMap.get(name);
-    return pack ? pack.dependencies : [];
+    if (pack === null || pack === undefined) {
+      return [];
+    }
+    return pack.dependencies;
   });
 
-  const isNewTask = (packName: string) => {
-    return !taskQueue.map(m => m.modulePath).some(f1 => f1.includes(packName));
-  };
-  const nextLevelDeps = distinctDeps(new Array<Dep>().concat(...deepDeps), packMap).filter(f => isNewTask(f.name));
+  const nextLevelDeps = distinctDeps(new Array<Dep>().concat(...deepDeps), packMap)
+    .filter(f => !taskQueue.map(m => m.modulePath).some(f1 => f1.includes(f.name)));
 
-  if (nextLevelDeps.length > 0) {
+  if (nextLevelDeps !== null && nextLevelDeps !== undefined && nextLevelDeps.length > 0) {
     const nextLevelQueue = getAllPackDeps(nextLevelDeps, packMap, projectPack);
-    taskQueue.splice(taskQueue.length, 0, ...nextLevelQueue);
+    const filteredNextLevel = nextLevelQueue.filter(f => !taskQueue.map(m => m.modulePath).includes(f.modulePath));
+    taskQueue.splice(taskQueue.length, 0, ...filteredNextLevel);
   }
   return taskQueue;
 };
