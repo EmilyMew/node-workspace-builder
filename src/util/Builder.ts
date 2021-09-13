@@ -57,7 +57,7 @@ export default class Builder {
         title: 'Building workspace',
         cancellable: false
       }, (progress, token) => {
-        const npmPath = `${process.env.APPDATA}${sep}npm`;
+        const npmPath = Configuration.npmPath();
         let needInstallAll = false;
         const task = NpmHelper.load(npmPath).then(() => {
           let timeout: NodeJS.Timeout | null = null;

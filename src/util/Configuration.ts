@@ -2,6 +2,8 @@
  * $Id:$
  * Copyright 2019 Emily36107@outlook.com All rights reserved.
  */
+import { sep } from 'path';
+import * as os from 'os';
 import { workspace, ConfigurationChangeEvent } from 'vscode';
 const DEFAULT_SECTION_NAME: string = 'node-workspace-builder';
 
@@ -24,6 +26,8 @@ export default class Configuration {
     public static INCLUDED_PATTERNS: string = 'includedPatterns';
 
     public static SHOW_OUTPUT: string = 'showOutput';
+
+    public static NPM_PATH: string = 'npmPath';
     /**
      * default constructor
      */
@@ -72,11 +76,19 @@ export default class Configuration {
     }
 
     /**
-     * get the auto build on save configuration
+     * get the show output configuration
      */
     public static showOutput(): boolean {
         const configuration = workspace.getConfiguration(DEFAULT_SECTION_NAME);
         return <boolean>configuration.get(Configuration.SHOW_OUTPUT);
+    }
+
+    /**
+     * get the npm path configuration
+     */
+    public static npmPath(): string {
+        const configuration = workspace.getConfiguration(DEFAULT_SECTION_NAME);
+        return <string>configuration.get(Configuration.NPM_PATH) || '';
     }
 
     /**

@@ -2,6 +2,10 @@
 
 All notable changes to the "Node Workspace Builder" extension will be documented in this file.
 
+## 0.2.8
+- `Added` Added configuration `npmPath` to specify npm global path for npm.load().
+- `Fixed` Fixed `Error: EROFS: read-only fiile system, mkdir '/undefined'` bug on Mac OS.
+
 ## 0.2.7
 - `Fixed` The configuration `node-workspace-builder.buildModulesWithoutInstall` is now effective.
 - `Changed` The `node_modules` folder will not be removed on cleaning.
