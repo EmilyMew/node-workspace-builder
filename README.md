@@ -51,6 +51,7 @@ This extension contributes the following settings:
 | `node-workspace-builder.buildModulesWithoutInstall` | For whose modules does not need install dependencies before building, specifying this to `true`, you can run build scripts directly.|
 | `node-workspace-builder.includedPatterns`           | Specify modules to build using regExp patterns. If leave it as an empty array, this extension will build all modules in workspace.|
 | `node-workspace-builder.showOutput`                 | Specify if show logs in output pannel.                                                                |
+| `node-workspace-builder.npmPath`                    | Specify the prefix to load npm pannel.                                                                |
 
 ## Keyboard Shortcuts
 

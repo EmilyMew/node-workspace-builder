@@ -2,6 +2,9 @@
 
 All notable changes to the "Node Workspace Builder" extension will be documented in this file.
 
+## 0.3.0
+- `Added` Added configuration `npmPath` to specify npm global path for npm.load(). Added to settings.
+
 ## 0.2.8
 - `Added` Added configuration `npmPath` to specify npm global path for npm.load().
 - `Fixed` Fixed `Error: EROFS: read-only fiile system, mkdir '/undefined'` bug on Mac OS.
